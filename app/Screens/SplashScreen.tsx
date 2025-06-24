@@ -1,58 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, Text } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 export default function SplashScreen() {
-  const navigation = useNavigation();
-  const [isLoading, setIsLoading] = useState(true); // Loading state
+    const navigation = useNavigation();
+
+  const router = useRouter();
 
   useEffect(() => {
-    const checkUserData = async () => {
-      try {
-     
-        const timer = setTimeout(async () => {
-          
-          const userDataString = await AsyncStorage.getItem('userData');
-          console.log('User Data (String):', userDataString);
+    const timer = setTimeout(() => {
+      navigation.navigate('Onboarding');
+    }, 2000);
 
-          if (userDataString) {
-            
-            const userData = JSON.parse(userDataString);
-            console.log('User Data (Parsed):', userData);
-
-          
-            if (userData) {
-              navigation.navigate('Home'); // Navigate to Home if user ID exists
-            } else {
-              // navigation.navigate('Register'); // Navigate to Register if no user ID
-            }
-          } else {
-            navigation.navigate('Register'); // Navigate to Register if no data found
-          }
-
-          setIsLoading(false); // Stop loading
-        }, 2000);
-
-       
-        return () => clearTimeout(timer);
-      } catch (error) {
-        console.error('Error checking user data:', error);
-        setIsLoading(false); // Stop loading in case of error
-        navigation.navigate('Register'); // Fallback to Register screen
-      }
-    };
-
-    checkUserData();
-  }, [navigation]);
+    return () => clearTimeout(timer);
+  }, [router]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Shuttle</Text>
-      <Text style={[styles.text, { color: 'rgba(0, 0, 0, 0.50)' }]}>DriverApp</Text>
-
-      {/* Show loading indicator while checking user data */}
-      {isLoading && <ActivityIndicator size="small" color="#000" style={styles.loader} />}
+      <Text style={styles.text}>Gas</Text>
+      <Text style={[styles.text, { color: 'rgba(0, 0, 0, 0.50)' }]}>App</Text>
     </View>
   );
 }
@@ -68,8 +36,5 @@ const styles = StyleSheet.create({
   text: {
     fontWeight: '700',
     fontSize: 40,
-  },
-  loader: {
-    marginTop: 20, // Add some spacing
   },
 });

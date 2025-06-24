@@ -1,759 +1,238 @@
-import EndingPoint from "@/components/EndingPoint";
-import PrimaryButton from "@/components/PrimaryButton";
-import StartPoint from "@/components/StartPoint";
-import ProfileComponent from "@/components/ui/ProfileComponent";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import * as Location from "expo-location";
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import Svg, {
-  Circle,
-  Defs,
-  LinearGradient,
-  Path,
-  Rect,
-  Stop,
-} from "react-native-svg";
+import { Image, StyleSheet, Platform, View, Text, TextInput,FlatList, TouchableOpacity ,ScrollView  } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import React, { useState, useEffect } from 'react';
+import { useNavigation } from '@react-navigation/native';
 
-interface LocationData {
-  coords: {
-    accuracy: number;
-    altitude: number;
-    heading: number;
-    latitude: number;
-    longitude: number;
-    speed: number;
-  };
-  timestamp: number;
-}
 
-interface HomeProps {
-  navigation: NativeStackNavigationProp<any>;
-}
+const inputFields = [
+  { id: 1, 
+  svg: 
+  <Svg xmlns="http://www.w3.org/2000/svg" width="24" height="25" viewBox="0 0 24 25" fill="none">
+  <Path d="M17.91 11.22H14.82V4.02002C14.82 2.34002 13.91 2.00002 12.8 3.26002L12 4.17002L5.23001 11.87C4.30001 12.92 4.69001 13.78 6.09001 13.78H9.18001V20.98C9.18001 22.66 10.09 23 11.2 21.74L12 20.83L18.77 13.13C19.7 12.08 19.31 11.22 17.91 11.22Z" fill="#2231B9"/>
+  </Svg>, 
+  amount: 'GHC 12 /fill',
+  title : 'Emergency Offer',
+  body : "Get your LPG cylinder delivered within 20 minutes with our Emergency Refill Offer. Fast, reliable service for unexpected gas run-outs.",
+  route : 'SelectLocation',
+  price : 12
+  },
+  
+  { id: 2, 
+  svg: 
+  <Svg xmlns="http://www.w3.org/2000/svg" width="24" height="25" viewBox="0 0 24 25" fill="none">
+  <Path d="M21.56 11.2401L20.2 9.66006C19.94 9.36006 19.73 8.80006 19.73 8.40006V6.70006C19.73 5.64006 18.86 4.77006 17.8 4.77006H16.1C15.71 4.77006 15.14 4.56006 14.84 4.30006L13.26 2.94006C12.57 2.35006 11.44 2.35006 10.74 2.94006L9.17 4.31006C8.87 4.56006 8.3 4.77006 7.91 4.77006H6.18C5.12 4.77006 4.25 5.64006 4.25 6.70006V8.41006C4.25 8.80006 4.04 9.36006 3.79 9.66006L2.44 11.2501C1.86 11.9401 1.86 13.0601 2.44 13.7501L3.79 15.3401C4.04 15.6401 4.25 16.2001 4.25 16.5901V18.3001C4.25 19.3601 5.12 20.2301 6.18 20.2301H7.91C8.3 20.2301 8.87 20.4401 9.17 20.7001L10.75 22.0601C11.44 22.6501 12.57 22.6501 13.27 22.0601L14.85 20.7001C15.15 20.4401 15.71 20.2301 16.11 20.2301H17.81C18.87 20.2301 19.74 19.3601 19.74 18.3001V16.6001C19.74 16.2101 19.95 15.6401 20.21 15.3401L21.57 13.7601C22.15 13.0701 22.15 11.9301 21.56 11.2401ZM16.16 10.6101L11.33 15.4401C11.19 15.5801 11 15.6601 10.8 15.6601C10.6 15.6601 10.41 15.5801 10.27 15.4401L7.85 13.0201C7.56 12.7301 7.56 12.2501 7.85 11.9601C8.14 11.6701 8.62 11.6701 8.91 11.9601L10.8 13.8501L15.1 9.55006C15.39 9.26006 15.87 9.26006 16.16 9.55006C16.45 9.84006 16.45 10.3201 16.16 10.6101Z" fill="#52B922"/>
+  </Svg>, 
+  amount: 'GHC10 /fill',
+  title : 'Regular Offer',
+  body : "Enjoy the convenience of having your LPG cylinder delivered to your home from 2pm to 4pm! .",
+  price: 10,
+  route : 'SelectLocation',
+  },
 
-export default function Home({ navigation }: HomeProps) {
-  const [isActiveTrip, setIsActiveTrip] = useState(false);
-  const [startPoint, setStartPoint] = useState<string>("");
-  const [endPoint, setEndPoint] = useState<string>("");
-  const [location, setLocation] = useState<LocationData | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string>("");
-  const [driverID, setDriverID] = useState<string>("");
-  const [busID, setBusID] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
-  const socketRef = useRef<any>(null);
-  const locationSubscriptionRef = useRef<any>(null);
-  const locationIntervalRef = useRef<any>(null);
+  { id: 3, 
+  svg: <Svg xmlns="http://www.w3.org/2000/svg" width="24" height="25" viewBox="0 0 24 25" fill="none">
+  <Path d="M16.75 4.06V2.5C16.75 2.09 16.41 1.75 16 1.75C15.59 1.75 15.25 2.09 15.25 2.5V4H8.74999V2.5C8.74999 2.09 8.40999 1.75 7.99999 1.75C7.58999 1.75 7.24999 2.09 7.24999 2.5V4.06C4.54999 4.31 3.23999 5.92 3.03999 8.31C3.01999 8.6 3.25999 8.84 3.53999 8.84H20.46C20.75 8.84 20.99 8.59 20.96 8.31C20.76 5.92 19.45 4.31 16.75 4.06Z" fill="#FFC700"/>
+  <Path d="M20 10.34H4C3.45 10.34 3 10.79 3 11.34V17.5C3 20.5 4.5 22.5 8 22.5H16C19.5 22.5 21 20.5 21 17.5V11.34C21 10.79 20.55 10.34 20 10.34ZM9.21 18.71C9.11 18.8 9 18.87 8.88 18.92C8.76 18.97 8.63 19 8.5 19C8.37 19 8.24 18.97 8.12 18.92C8 18.87 7.89 18.8 7.79 18.71C7.61 18.52 7.5 18.26 7.5 18C7.5 17.74 7.61 17.48 7.79 17.29C7.89 17.2 8 17.13 8.12 17.08C8.36 16.98 8.64 16.98 8.88 17.08C9 17.13 9.11 17.2 9.21 17.29C9.39 17.48 9.5 17.74 9.5 18C9.5 18.26 9.39 18.52 9.21 18.71ZM9.42 14.88C9.37 15 9.3 15.11 9.21 15.21C9.11 15.3 9 15.37 8.88 15.42C8.76 15.47 8.63 15.5 8.5 15.5C8.37 15.5 8.24 15.47 8.12 15.42C8 15.37 7.89 15.3 7.79 15.21C7.7 15.11 7.63 15 7.58 14.88C7.53 14.76 7.5 14.63 7.5 14.5C7.5 14.37 7.53 14.24 7.58 14.12C7.63 14 7.7 13.89 7.79 13.79C7.89 13.7 8 13.63 8.12 13.58C8.36 13.48 8.64 13.48 8.88 13.58C9 13.63 9.11 13.7 9.21 13.79C9.3 13.89 9.37 14 9.42 14.12C9.47 14.24 9.5 14.37 9.5 14.5C9.5 14.63 9.47 14.76 9.42 14.88ZM12.71 15.21C12.61 15.3 12.5 15.37 12.38 15.42C12.26 15.47 12.13 15.5 12 15.5C11.87 15.5 11.74 15.47 11.62 15.42C11.5 15.37 11.39 15.3 11.29 15.21C11.11 15.02 11 14.76 11 14.5C11 14.24 11.11 13.98 11.29 13.79C11.39 13.7 11.5 13.63 11.62 13.58C11.86 13.47 12.14 13.47 12.38 13.58C12.5 13.63 12.61 13.7 12.71 13.79C12.89 13.98 13 14.24 13 14.5C13 14.76 12.89 15.02 12.71 15.21Z" fill="#FFC700"/>
+  </Svg>, 
+  amount: ' GHC 20 /Month',
+  title : '3 Months Free Refill',
+  body : "Sign up now and enjoy 3 months of free LPG refills! Get convenient and reliable gas deliveries to your doorstep at no cost for the first two months.",
+  price  :7,
+  route : 'SelectLocation',
+  }
 
-  const BASE_CUSTOMER_URL = "https://shuttle-backend-0.onrender.com/api/v1";
+];
 
-  // Test network connectivity
-  const testConnectivity = async () => {
-    try {
-      console.log("Testing network connectivity...");
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+export default function Home() {
+  const navigation = useNavigation()
 
-      const response = await fetch("https://shuttle-backend-0.onrender.com/", {
-        method: "HEAD",
-        signal: controller.signal,
-      });
+  const [firstName, setFirstName] = useState('');
 
-      clearTimeout(timeoutId);
-      console.log("Server is reachable, status:", response.status);
-      return true;
-    } catch (error: any) {
-      console.error("Server connectivity test failed:", error.message);
-      return false;
-    }
-  };
+  // useEffect(() => {
+  //   async function fetchFirstName() {
+  //     try {
+  //       const storedFirstName = await AsyncStorage.getItem('firstName');
+  //       if (storedFirstName !== null) {
+  //         setFirstName(storedFirstName);
+  //       }
+  //     } catch (error) {
+  //       console.error('Error retrieving first name:', error);
+  //     }
+  //   }
 
-  useEffect(() => {
-    const fetchDrivers = async () => {
-      try {
-        console.log(
-          "Attempting to fetch drivers from:",
-          `${BASE_CUSTOMER_URL}/drivers/drivers`
-        );
+  //   fetchFirstName();
+  // }, []);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-        const response = await fetch(`${BASE_CUSTOMER_URL}/drivers/drivers`, {
-          signal: controller.signal,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log("Drivers fetched successfully:", data);
-      } catch (err: any) {
-        if (err.name === "AbortError") {
-          console.error("Request timed out after 10 seconds");
-        } else if (err.message?.includes("Network request failed")) {
-          console.error(
-            "Network error - check internet connection and server status"
-          );
-        } else {
-          console.error("Error fetching drivers:", err.message || err);
-        }
-      }
-    };
-    // fetchDrivers();
-  }, []);
-
-  const switchStatus = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(
-        `${BASE_CUSTOMER_URL}/drivers/drivers/switchStatus`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            driverID: busID,
-          }),
-        }
-      );
-      const data = await response.json();
-
-      if (response.ok) {
-        setIsActiveTrip((previousState) => !previousState);
-        console.log(
-          `Driver ${busID} is ${!isActiveTrip ? "active" : "inactive"}`
-        );
-      } else {
-        Alert.alert("Error", data.message || "Failed to toggle bus status.");
-      }
-    } catch (error: any) {
-      Alert.alert("Error", error?.message || "Could not toggle bus status.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const toggleSwitch = () => {
-    switchStatus();
-  };
-
-  const handleStartPointChange = (selectedLocation: string) => {
-    setStartPoint(selectedLocation);
-  };
-
-  const handleEndPointChange = (selectedLocation: string) => {
-    setEndPoint(selectedLocation);
-  };
-
-  const handleConfirmRoute = () => {
-    console.log("Start Point:", startPoint);
-    console.log("End Point:", endPoint);
-    if (location) {
-      console.log("Current Location:", location.coords);
-    }
-  };
-
-  // Set up location tracking
-  useEffect(() => {
-    const setupLocationTracking = async () => {
-      try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setErrorMsg("Permission to access location was denied");
-          return;
-        }
-
-        // Get initial location
-        let currentLocation = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-        setLocation(currentLocation as LocationData);
-        console.log("Initial location:", currentLocation);
-
-        // Start watching position
-        const locationSubscription = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.High,
-            timeInterval: 1000,
-            distanceInterval: 10,
-          },
-          (newLocation) => {
-            setLocation(newLocation as LocationData);
-            // console.log("Location updated:", newLocation);
-          }
-        );
-
-        locationSubscriptionRef.current = locationSubscription;
-      } catch (error) {
-        console.error("Error setting up location tracking:", error);
-        setErrorMsg("Error setting up location tracking");
-      }
-    };
-
-    setupLocationTracking();
-
-    return () => {
-      if (locationSubscriptionRef.current) {
-        locationSubscriptionRef.current.remove();
-      }
-    };
-  }, []);
-
-  // Set up WebSocket connection
-  useEffect(() => {
-    if (!busID) return;
-
-    const initializeSocket = async () => {
-      // Test connectivity first
-      const isConnected = await testConnectivity();
-      if (!isConnected) {
-        setErrorMsg(
-          "Cannot reach server. Please check your internet connection."
-        );
-        return;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const io = require("socket.io-client");
-
-      console.log("Attempting to connect to socket with busID:", busID);
-
-      const socket = io("https://shuttle-backend-0.onrender.com/", {
-        transports: ["polling", "websocket"], // Try polling first, then websocket
-        reconnection: true,
-        reconnectionAttempts: 10,
-        reconnectionDelay: 2000,
-        reconnectionDelayMax: 10000,
-        timeout: 30000,
-        forceNew: true,
-        upgrade: true,
-        rememberUpgrade: false,
-      });
-
-      socketRef.current = socket;
-
-      socket.on("connect", () => {
-        console.log("Socket connected successfully with ID:", socket.id);
-        setIsConnected(true);
-        setErrorMsg("");
-
-        // Emit driver connection with more details
-        const driverData = {
-          name: driverID || "Unknown Driver",
-          shuttleId: busID,
-          route:
-            startPoint && endPoint
-              ? `${startPoint} -> ${endPoint}`
-              : "No route set",
-          timestamp: Date.now(),
-        };
-
-        console.log("Emitting driver-connect with data:", driverData);
-        socket.emit("driver-connect", driverData);
-      });
-
-      socket.on("disconnect", (reason: string) => {
-        console.log("Socket disconnected. Reason:", reason);
-        setIsConnected(false);
-
-        // Handle Render.com's known issues
-        if (
-          reason === "ping timeout" ||
-          reason === "io server disconnect" ||
-          reason === "transport close"
-        ) {
-          console.log(
-            "Detected Render.com timeout issue, will auto-reconnect..."
-          );
-          setTimeout(() => {
-            if (!socket.connected) {
-              console.log("Attempting manual reconnection...");
-              socket.connect();
-            }
-          }, 2000);
-        }
-      });
-
-      socket.on("connect_error", (error: any) => {
-        console.error("Socket connection error details:", {
-          message: error.message,
-          description: error.description,
-          context: error.context,
-          type: error.type,
-        });
-
-        // Handle Render.com specific errors
-        if (
-          error.message === "timeout" ||
-          error.message?.includes("websocket error")
-        ) {
-          setErrorMsg(
-            "Server connection unstable (Render.com limitation). Retrying..."
-          );
-        } else {
-          setErrorMsg(`Connection failed: ${error.message || "Unknown error"}`);
-        }
-        setIsConnected(false);
-      });
-
-      socket.on("reconnect", (attemptNumber: number) => {
-        console.log(
-          "Socket reconnected successfully after",
-          attemptNumber,
-          "attempts"
-        );
-        setIsConnected(true);
-        setErrorMsg("");
-      });
-
-      socket.on("reconnect_error", (error: any) => {
-        console.error("Socket reconnection failed:", error.message);
-        setErrorMsg(`Reconnection failed: ${error.message || "Unknown error"}`);
-      });
-
-      socket.on("reconnect_failed", () => {
-        console.error("Socket reconnection failed permanently");
-        setErrorMsg(
-          "Failed to connect to server. Please check your internet connection."
-        );
-        setIsConnected(false);
-      });
-
-      socket.on("driver-locations", (data: any) => {
-        console.log("Received driver locations:", data);
-      });
-
-      socket.on("bus-stop-updates", (users: any) => {
-        console.log("Received bus stop updates:", users);
-      });
-
-      // Test connection after a delay
-      setTimeout(() => {
-        if (!socket.connected) {
-          console.log(
-            "Socket not connected after timeout, connection status:",
-            {
-              connected: socket.connected,
-              id: socket.id,
-              transport: socket.io?.engine?.transport?.name,
-            }
-          );
-        } else {
-          console.log(
-            "Socket connected successfully with transport:",
-            socket.io?.engine?.transport?.name
-          );
-        }
-      }, 5000);
-    };
-
-    initializeSocket();
-
-    return () => {
-      console.log("Cleaning up socket connection");
-      if (locationIntervalRef.current) {
-        clearInterval(locationIntervalRef.current);
-      }
-      if (socketRef.current) {
-        socketRef.current.off(); // Remove all listeners
-        socketRef.current.disconnect();
-      }
-    };
-  }, [busID, driverID, startPoint, endPoint]);
-
-  // Handle location updates to socket
-  useEffect(() => {
-    if (!socketRef.current || !location || !isActiveTrip) return;
-
-    const emitLocationUpdate = () => {
-      if (socketRef.current?.connected && location && isActiveTrip) {
-        const locationData = {
-          driverId: busID,
-          location: {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            accuracy: location.coords.accuracy,
-            altitude: location.coords.altitude,
-            heading: location.coords.heading,
-            speed: location.coords.speed,
-            timestamp: location.timestamp,
-          },
-          route: `${startPoint} -> ${endPoint}`,
-          isActive: isActiveTrip,
-        };
-
-        socketRef.current.emit("driver-location-update", locationData);
-        console.log("Location emitted:", locationData);
-      }
-    };
-
-    // Emit location immediately
-    emitLocationUpdate();
-
-    // Set up interval for periodic updates
-    locationIntervalRef.current = setInterval(emitLocationUpdate, 3000);
-
-    return () => {
-      if (locationIntervalRef.current) {
-        clearInterval(locationIntervalRef.current);
-      }
-    };
-  }, [location, isActiveTrip, busID, startPoint, endPoint]);
-
-  useEffect(() => {
-    const retrieveUserData = async () => {
-      try {
-        const userDataString = await AsyncStorage.getItem("userData");
-        if (userDataString) {
-          const userData = JSON.parse(userDataString);
-          console.log("Retrieved User Data:", userData);
-
-          if (userData.driver?.id) {
-            setBusID(userData.driver.id);
-            setDriverID(userData.driver.fullName || userData.driver.id);
-            console.log("Bus ID:", userData.driver.id);
-          }
-        } else {
-          console.log("No user data found in AsyncStorage.");
-        }
-      } catch (error) {
-        console.error("Error retrieving user data:", error);
-      }
-    };
-
-    retrieveUserData();
-  }, []);
-
-  const handleSignOut = async () => {
-    try {
-      // Disconnect socket before signing out
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
-
-      // Clear location tracking
-      if (locationSubscriptionRef.current) {
-        locationSubscriptionRef.current.remove();
-      }
-
-      if (locationIntervalRef.current) {
-        clearInterval(locationIntervalRef.current);
-      }
-
-      await AsyncStorage.removeItem("userToken");
-      await AsyncStorage.removeItem("userData");
-      console.log("User data cleared from AsyncStorage");
-
-      navigation.navigate("Register");
-    } catch (error) {
-      console.error("Error signing out:", error);
-      Alert.alert("Error", "Failed to sign out. Please try again.");
-    }
-  };
+  
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.main}>
-        <View style={styles.contentWrapper}>
-          <View style={styles.mainContent}>
-            <View style={styles.header}>
-              <ProfileComponent />
-              <TouchableOpacity
-                onPress={() =>
-                  Alert.alert("Notifications", "No new notifications")
-                }
-              >
-                <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M12.02 2.90997C8.71003 2.90997 6.02003 5.59997 6.02003 8.90997V11.8C6.02003 12.41 5.76003 13.34 5.45003 13.86L4.30003 15.77C3.59003 16.95 4.08003 18.26 5.38003 18.7C9.69003 20.14 14.34 20.14 18.65 18.7C19.86 18.3 20.39 16.87 19.73 15.77L18.58 13.86C18.28 13.34 18.02 12.41 18.02 11.8V8.90997C18.02 5.60997 15.32 2.90997 12.02 2.90997Z"
-                    stroke="#828282"
-                    strokeWidth="2"
-                    strokeMiterlimit="10"
-                    strokeLinecap="round"
-                  />
-                  <Path
-                    d="M13.87 3.2C13.56 3.11 13.24 3.04 12.91 3C11.95 2.88 11.03 2.95 10.17 3.2C10.46 2.46 11.18 1.94 12.02 1.94C12.86 1.94 13.58 2.46 13.87 3.2Z"
-                    stroke="#828282"
-                    strokeWidth="2"
-                    strokeMiterlimit="10"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <Path
-                    d="M15.02 19.06C15.02 20.71 13.67 22.06 12.02 22.06C11.2 22.06 10.44 21.72 9.89999 21.18C9.35999 20.64 9.01999 19.88 9.01999 19.06"
-                    stroke="#828282"
-                    strokeWidth="2"
-                    strokeMiterlimit="10"
-                  />
-                </Svg>
-              </TouchableOpacity>
-            </View>
-
-            {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
-            {!isConnected && busID && (
-              <Text style={styles.errorText}>
-                Location service disconnected
-              </Text>
-            )}
+    <View style={styles.main}>
+      <View style = {{
+           flexDirection: 'row',
+           alignItems: 'center',
+           justifyContent: 'space-between',
+           alignSelf : 'stretch',
+          }}>
+            <View style ={{
+          flexDirection : 'row',
+          alignItems : 'center',
+          gap : 16
+        }}>
+          <View style={{
+              padding : 8,
+              borderRadius : 24,
+              borderWidth : 1,
+              borderColor : 'rgba(0,0,0,.1)',
+              backgroundColor : '#fafafa'
+          }}>
+            <Svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <Path d="M3 7H21" stroke="black" stroke-opacity="1" stroke-width="2" stroke-linecap="round"/>
+              <Path d="M3 12H21" stroke="black" stroke-opacity="1" stroke-width="2" stroke-linecap="round"/>
+              <Path d="M3 17H21" stroke="black" stroke-opacity="1" stroke-width="2" stroke-linecap="round"/>
+            </Svg>
           </View>
+          <View style = {{
+            flexDirection : 'column',
+            gap : 4
+          }}>
+            <Text style ={{
+              fontWeight : '600',
+              fontSize : 16
+             
+            }}>Hello {firstName} 👋</Text>
 
-          <View style={{ gap: 12 }}>
-            <View
-              style={[
-                styles.toggleContainer,
-                isActiveTrip && styles.activeToggleContainer,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.toggleText,
-                  isActiveTrip && styles.activeToggleText,
-                ]}
-              >
-                {isActiveTrip ? "Active Trip" : "Inactive"}
-              </Text>
-              <TouchableOpacity
-                onPress={toggleSwitch}
-                activeOpacity={0.8}
-                disabled={isLoading}
-              >
-                <Svg width="40" height="30" viewBox="0 0 40 20">
-                  <Rect
-                    width="40"
-                    height="20"
-                    rx="10"
-                    fill={isActiveTrip ? "#1573FE" : "#D9D9D9"}
-                    transform={
-                      isActiveTrip ? undefined : "matrix(-1 0 0 1 40 0)"
-                    }
-                  />
-                  <Circle
-                    cx={isActiveTrip ? 29 : 11}
-                    cy="10"
-                    r="7.74286"
-                    fill="white"
-                    stroke="url(#paint0_linear)"
-                    strokeWidth="0.514286"
-                  />
-                  <Defs>
-                    <LinearGradient
-                      id="paint0_linear"
-                      x1={isActiveTrip ? 21 : 0}
-                      y1={isActiveTrip ? 2 : 0}
-                      x2={isActiveTrip ? 21 : 0}
-                      y2={isActiveTrip ? 18 : 16}
-                      gradientUnits="userSpaceOnUse"
-                    >
-                      <Stop stopColor="#F8F8F8" stopOpacity="0.0252353" />
-                      <Stop offset="1" stopColor="#EEEEEE" />
-                    </LinearGradient>
-                  </Defs>
-                </Svg>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.toggleDescription}>
-              {isActiveTrip
-                ? "You are currently on an active ride"
-                : "Switch the button on when you're on an active ride"}
-            </Text>
+            <Text style ={{
+              fontSize : 12,
+              color : '#4F4F4F)'
+            }}>Let’s fill your LPG for you in less than 5 minutes</Text>
           </View>
-
-          <View style={styles.routesContainer}>
-            <Text style={styles.routesTitle}>Routes</Text>
-
-            <View style={styles.routeInputsContainer}>
-              <View style={styles.routeInputWrapper}>
-                <Text style={styles.routeInputLabel}>Starting Point</Text>
-                <View style={styles.routeInputRow}>
-                  <View style={styles.circleContainer}>
-                    <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <Path
-                        d="M20.6201 8.45C19.5701 3.83 15.5401 1.75 12.0001 1.75C12.0001 1.75 12.0001 1.75 11.9901 1.75C8.4601 1.75 4.4201 3.82 3.3701 8.44C2.2001 13.6 5.3601 17.97 8.2201 20.72C9.2801 21.74 10.6401 22.25 12.0001 22.25C13.3601 22.25 14.7201 21.74 15.7701 20.72C18.6301 17.97 21.7901 13.61 20.6201 8.45ZM12.0001 13.46C10.2601 13.46 8.8501 12.05 8.8501 10.31C8.8501 8.57 10.2601 7.16 12.0001 7.16C13.7401 7.16 15.1501 8.57 15.1501 10.31C15.1501 12.05 13.7401 13.46 12.0001 13.46Z"
-                        fill="black"
-                        fillOpacity="0.6"
-                      />
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('Notification')}>
+                <View style={{
+                  padding : 8,
+                  borderRadius : 8,
+                  borderWidth : 1,
+                  borderColor : 'rgba(0,0,0,.1)',
+                  backgroundColor : '#fafafa'
+                }}>
+                    <Svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <Path d="M12.02 2.90997C8.71003 2.90997 6.02003 5.59997 6.02003 8.90997V11.8C6.02003 12.41 5.76003 13.34 5.45003 13.86L4.30003 15.77C3.59003 16.95 4.08003 18.26 5.38003 18.7C9.69003 20.14 14.34 20.14 18.65 18.7C19.86 18.3 20.39 16.87 19.73 15.77L18.58 13.86C18.28 13.34 18.02 12.41 18.02 11.8V8.90997C18.02 5.60997 15.32 2.90997 12.02 2.90997Z" stroke="#000" stroke-width="2" stroke-miterlimit="10" stroke-linecap="round"/>
+                      <Path d="M13.87 3.2C13.56 3.11 13.24 3.04 12.91 3C11.95 2.88 11.03 2.95 10.17 3.2C10.46 2.46 11.18 1.94 12.02 1.94C12.86 1.94 13.58 2.46 13.87 3.2Z" stroke="#000" stroke-width="2" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+                      <Path d="M15.02 19.06C15.02 20.71 13.67 22.06 12.02 22.06C11.2 22.06 10.44 21.72 9.89999 21.18C9.35999 20.64 9.01999 19.88 9.01999 19.06" stroke="#000" stroke-width="2" stroke-miterlimit="10"/>
                     </Svg>
-                  </View>
-                  {/* <Text style={styles.routeDisplayText}>{startPoint}</Text> */}
-                  <StartPoint onLocationSelect={handleStartPointChange} />
                 </View>
-              </View>
+            </TouchableOpacity>
+          
+           
 
-              <View style={styles.dashedLine} />
+      </View>
 
-              <View style={styles.routeInputWrapper}>
-                <Text style={styles.routeInputLabel}>Ending Point</Text>
-                <View style={styles.routeInputRow}>
-                  <View style={styles.circleContainer}>
-                    <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <Path
-                        d="M20.6202 8.7C19.5802 4.07 15.5402 2 12.0002 2C12.0002 2 12.0002 2 11.9902 2C8.46024 2 4.43024 4.07 3.38024 8.69C2.20024 13.85 5.36024 18.22 8.22024 20.98C9.28024 22 10.6402 22.51 12.0002 22.51C13.3602 22.51 14.7202 22 15.7702 20.98C18.6302 18.22 21.7902 13.86 20.6202 8.7ZM15.2802 9.53L11.2802 13.53C11.1302 13.68 10.9402 13.75 10.7502 13.75C10.5602 13.75 10.3702 13.68 10.2202 13.53L8.72024 12.03C8.43024 11.74 8.43024 11.26 8.72024 10.97C9.01024 10.68 9.49024 10.68 9.78024 10.97L10.7502 11.94L14.2202 8.47C14.5102 8.18 14.9902 8.18 15.2802 8.47C15.5702 8.76 15.5702 9.24 15.2802 9.53Z"
-                        fill="black"
-                        fillOpacity="0.6"
-                      />
-                    </Svg>
-                  </View>
-                  <EndingPoint onLocationSelect={handleEndPointChange} />
-                </View>
-              </View>
-            </View>
+      <View style ={{
+        flexDirection : 'column',
+        gap : 16,
+        alignSelf : 'stretch',
+      }}>
+
+        <View style ={{
+          flexDirection : 'column',
+          gap : 4,
+        
+        }}>
+            <Text style={{
+              fontSize : 20,
+              fontWeight : '700'
+            }}>Select Offer</Text>
+
+            <Text style={{
+              fontSize : 14,
+              color : 'rgba(0, 0, 0, 0.60)'
+            }}>Select your prefer gas filling offer</Text>
+        </View>
+        
+        <FlatList
+  data={inputFields}
+  keyExtractor={(item) => item.id}
+  renderItem={({ item }) => (
+    <TouchableOpacity onPress={() => {
+      navigation.navigate(item.route, {
+        offerName: item.title,
+        offerPrice: item.price,
+        offerId : item.id
+      });
+    }}>
+      <View style={styles.container}>
+        <View style={styles.col1}>
+          {item.svg}
+          <View style={{
+            flexDirection: 'row',
+            gap: 4,
+            padding: 8,
+            borderWidth: 1,
+            borderRadius: 24,
+            borderColor: 'rgba(0, 0, 0, 0.10)',
+            backgroundColor: '#FAFAFA'
+          }}>
+            <Text style={{
+              color: 'rgba(0, 0, 0, 0.60)'
+            }}>Average</Text>
+            <Text>{item.amount}</Text>
           </View>
-
-          <PrimaryButton title="Confirm Route" onPress={handleConfirmRoute} />
-
-          <TouchableOpacity
-            style={styles.signOutButton}
-            onPress={handleSignOut}
-          >
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </TouchableOpacity>
+        </View>
+        <View style={{
+          flexDirection: 'column',
+          gap: 8
+        }}>
+          <Text style={{
+            fontWeight: '700',
+            fontSize: 18
+          }}>{item.title}</Text>
+          <Text style={{
+            fontSize: 14,
+            color: 'rgba(0, 0, 0, 0.50)'
+          }}>{item.body}</Text>
         </View>
       </View>
-    </ScrollView>
+    </TouchableOpacity>
+  )}
+  contentContainerStyle={styles.wrap}
+/>
+
+      </View>
+          
+    </View>
   );
 }
 
+
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-  },
   main: {
-    flex: 1,
-    backgroundColor: "white",
-    paddingHorizontal: 8,
-    paddingTop: 30,
+    flexDirection: 'column',
+    alignItems : 'flex-start',
+    gap : 30,
+    flex : 1,
+    alignSelf : 'stretch',
+    backgroundColor : 'white',
+    paddingHorizontal : 16,
+    paddingTop :30
   },
-  contentWrapper: {
-    flex: 1,
-    gap: 44,
-    marginHorizontal: 12,
+  container : {
+    flexDirection : 'column',
+    gap : 24,
+    padding : 16,
+    width : 'auto',
+    alignSelf : 'stretch',
+    backgroundColor : 'rgba(34, 49, 185, 0.03)',
+    borderRadius : 16,
+    borderColor : 'rgba(0, 0, 0, 0.05)',
+    borderWidth : 1
   },
-  mainContent: {
-    gap: 12,
+  col1 : {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  errorText: {
-    fontSize: 12,
-    borderWidth: 1,
-    borderColor: "red",
-    borderRadius: 12,
-    padding: 12,
-    color: "red",
-    marginTop: 4,
-    width: "100%",
-  },
-  toggleContainer: {
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: "#f4f4f4",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-  toggleText: {
-    fontSize: 18,
-  },
-  circleContainer: {
-    borderRadius: 50,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.1)",
-    borderStyle: "dashed",
-    padding: 12,
-    height: 50,
-    width: 50,
-  },
-  dashedLine: {
-    height: 60,
-    width: 1,
-    borderWidth: 1,
-    marginHorizontal: 24,
-    borderStyle: "dashed",
-    borderColor: "rgba(0,0,0,0.2)",
-  },
-  signOutButton: {
-    backgroundColor: "#fd4d36",
-    marginTop: "auto",
-    marginBottom: 8,
-    fontWeight: "600",
-    paddingVertical: 16,
-    borderRadius: 20,
-    alignItems: "center",
-  },
-  activeToggleContainer: {
-    backgroundColor: "#E8F2FF",
-  },
-  activeToggleText: {
-    color: "#1573FE",
-  },
-  toggleDescription: {
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.2)",
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 14,
-    color: "rgba(0,0,0,0.6)",
-    textAlign: "center",
-  },
-  routesContainer: {
-    gap: 2,
-  },
-  routesTitle: {
-    fontWeight: "700",
-    fontSize: 18,
-  },
-  routeInputsContainer: {
-    gap: 12,
-  },
-  routeInputWrapper: {
-    gap: 12,
-  },
-  routeInputLabel: {
-    fontSize: 16,
-    color: "rgba(0,0,0,0.6)",
-  },
-  routeInputRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  routeDisplayContainer: {
-    height: 50,
-    borderColor: "rgba(0,0,0,0.2)",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    width: "83%",
-    justifyContent: "center",
-    backgroundColor: "#f8f8f8",
-  },
-  routeDisplayText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  signOutText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 16,
-  },
+  wrap : {
+    gap : 16
+  }
 });
