@@ -2,7 +2,7 @@ import BackButton from '@/components/BackButton';
 import PrimaryButton from '@/components/PrimaryButton';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, ClipPath } from 'react';
 import {
   // StyleSheet,
   Text,
@@ -10,9 +10,11 @@ import {
   View,
   TouchableOpacity
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, G, Rect, Defs } from 'react-native-svg';
 import OpenStreetMapComponent from './OpenStreetMapComponent';
 import { ScrollView } from 'react-native';
+import { useLocationContext } from '../../hooks/LocationContext'; 
+
 
 export default function SelectLocation() {
   const navigation = useNavigation();
@@ -25,7 +27,7 @@ export default function SelectLocation() {
     latitude: 6.67618,
     longitude: -1.56236,
     latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
+    longitudeDelta: 0.01, 
   });
   const [marker, setMarker] = useState<{ latitude: number; longitude: number; latitudeDelta?: number; longitudeDelta?: number } | null>(null);
 
@@ -49,6 +51,15 @@ export default function SelectLocation() {
       updateAddress(newRegion);
     })();
   }, []);
+
+  const isDisabled = !currentLocation || !marker;
+
+  const { selectedLocation, closeLandmarks } = useLocationContext();
+
+  useEffect(() => {
+    console.log('CurrentLocation:', selectedLocation);
+  },[closeLandmarks])
+
 
   const handleCloseSearch = () => {
     setOpenSearch(false);
@@ -122,30 +133,11 @@ export default function SelectLocation() {
       </View>
 
       <View style={styles.mapContainer}>
-        {/* <MapView
-          style={styles.map}
-          region={region}
-          onRegionChangeComplete={setRegion}
-          showsUserLocation={true}
-          followsUserLocation={true}
-          onPress={handleMapPress}
-        >
-          {marker && (
-            <Marker coordinate={marker} title={currentLocation || 'Selected Location'} />
-          )}
-        </MapView>
-        <TouchableOpacity style={styles.refocusButton} onPress={handleRefocusLocation}>
-          <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v4h4v2h-4v4h-2v-4H7v-2h4V7z"
-              fill="#fff"
-            />
-          </Svg>
-        </TouchableOpacity> */}
+
         <OpenStreetMapComponent/>
       </View>
 
-      <View style={[styles.footer, { top: openSearch === true ? -300 : 0,  
+      <View style={[styles.footer, { position : 'fixed' ,top: openSearch === true ? -550 : 0,  
         paddingTop : openSearch === true ? 24 : 24,
         borderTopRightRadius : openSearch === true ? 0 : 24,
         borderTopLeftRadius : openSearch === true ? 0 : 24,
@@ -160,17 +152,19 @@ export default function SelectLocation() {
             position: 'relative',
             marginBottom: 12,
           }}
-        >
-          <View style={{ position: 'absolute', left: 0 }}>
-            
+        >   
             <TouchableOpacity style={{
-              backgroundColor : "red"
+              // backgroundColor : "red"
             }} onPress={handleCloseSearch}>
+              <View style={{
+                display : 'flex',
+                alignItems : 'center'
+              }}>
               <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <Path d="M6.4 19L5 17.6L10.6 12L5 6.4L6.4 5L12 10.6L17.6 5L19 6.4L13.4 12L19 17.6L17.6 19L12 13.4L6.4 19Z" fill="#1D1B20"/>
               </Svg>
+               </View>
             </TouchableOpacity>
-          </View>
           <Text style={[styles.headerText, { flex: 1, textAlign: 'center' }]}>Your Route</Text>
         </View>
         
@@ -195,17 +189,29 @@ export default function SelectLocation() {
           />
         </View>
 
-        <View
-          style={[
-            styles.locationOption,
-            // { display: openSearch ? 'none' : 'flex' }
-          ]}
-          onTouchEnd={() =>
-            handleLocationSelect('Current Location', {
-              latitude: region.latitude,
-              longitude: region.longitude,
-            })
-          }
+        <TouchableOpacity
+          style={styles.locationOption}
+          activeOpacity={0.7}
+          onPress={async () => {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+              alert('Permission to access location was denied.');
+              return;
+            }
+            let location = await Location.getCurrentPositionAsync({});
+            const newRegion = {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            };
+            setRegion(newRegion);
+            setMarker(newRegion);
+            updateAddress(newRegion);
+            handleLocationSelect('Current Location', newRegion);
+            setOpenSearch(false);
+            setCloseSearch(true);
+          }}
         >
           <View style={styles.iconContainer}>
             <Svg width="16" height="17" viewBox="0 0 16 17" fill="none">
@@ -221,157 +227,78 @@ export default function SelectLocation() {
               Save time by selecting your current location
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <ScrollView
-          style={{ maxHeight: 320 }}
-          contentContainerStyle={{ gap: 8 }}
+          style={{ maxHeight: 320, display: openSearch ? 'flex' : 'none' }}
+          contentContainerStyle={{ gap: 12 }}
           showsVerticalScrollIndicator={false}
         >
-          <View style={{ flexDirection: 'column', gap: 8 }}>
-            <View style={{ marginBottom: 8 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  padding: 10,
-                  borderRadius: 12,
-                  backgroundColor: '#fafafa',
-                  gap: 12,
-                }}
-                onTouchEnd={() =>
-                  handleLocationSelect('Landmark 1', {
-                    latitude: region.latitude + 0.0005,
-                    longitude: region.longitude + 0.0005,
-                  })
-                }
-              >
-                <View style={styles.iconContainer}>
-                  <Svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                    {/* ...SVG Paths... */}
-                    <Path d="M31 8H23V10H31V31H23V33H33V10C33 9.46957 32.7893 8.96086 32.4142 8.58579C32.0391 8.21071 31.5304 8 31 8Z" fill="black" fillOpacity="0.6"/>
-                    <Path d="M19.88 3H6.12C5.55774 3 5.01851 3.22336 4.62093 3.62093C4.22336 4.01851 4 4.55774 4 5.12V33H22V5.12C22 4.55774 21.7766 4.01851 21.3791 3.62093C20.9815 3.22336 20.4423 3 19.88 3ZM20 31H17V28H9V31H6V5.12C6 5.10424 6.0031 5.08864 6.00913 5.07408C6.01516 5.05952 6.024 5.04629 6.03515 5.03515C6.04629 5.024 6.05952 5.01516 6.07408 5.00913C6.08864 5.0031 6.10424 5 6.12 5H19.88C19.8958 5 19.9114 5.0031 19.9259 5.00913C19.9405 5.01516 19.9537 5.024 19.9649 5.03515C19.976 5.04629 19.9848 5.05952 19.9909 5.07408C19.9969 5.08864 20 5.10424 20 5.12V31Z" fill="black" fillOpacity="0.6"/>
-                    {/* ...other paths... */}
-                  </Svg>
-                </View>
-                <View style={styles.locationText}>
-                  <Text style={styles.locationTitle}>Pizzaman Chicken</Text>
-                  <Text style={styles.locationSubtitle}>
-                    Mango Road, Kumasi
-                  </Text>
-                </View>
-              </View>
-            </View>
-            {/* Repeat the above block for each location option as needed */}
-            <View style={{ marginBottom: 8 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  padding: 10,
-                  borderRadius: 12,
-                  backgroundColor: '#fafafa',
-                  gap: 12,
-                }}
-                onTouchEnd={() =>
-                  handleLocationSelect('Landmark 1', {
-                    latitude: region.latitude + 0.0005,
-                    longitude: region.longitude + 0.0005,
-                  })
-                }
-              >
-                <View style={styles.iconContainer}>
-                  <Svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                    {/* ...SVG Paths... */}
-                    <Path d="M31 8H23V10H31V31H23V33H33V10C33 9.46957 32.7893 8.96086 32.4142 8.58579C32.0391 8.21071 31.5304 8 31 8Z" fill="black" fillOpacity="0.6"/>
-                    <Path d="M19.88 3H6.12C5.55774 3 5.01851 3.22336 4.62093 3.62093C4.22336 4.01851 4 4.55774 4 5.12V33H22V5.12C22 4.55774 21.7766 4.01851 21.3791 3.62093C20.9815 3.22336 20.4423 3 19.88 3ZM20 31H17V28H9V31H6V5.12C6 5.10424 6.0031 5.08864 6.00913 5.07408C6.01516 5.05952 6.024 5.04629 6.03515 5.03515C6.04629 5.024 6.05952 5.01516 6.07408 5.00913C6.08864 5.0031 6.10424 5 6.12 5H19.88C19.8958 5 19.9114 5.0031 19.9259 5.00913C19.9405 5.01516 19.9537 5.024 19.9649 5.03515C19.976 5.04629 19.9848 5.05952 19.9909 5.07408C19.9969 5.08864 20 5.10424 20 5.12V31Z" fill="black" fillOpacity="0.6"/>
-                    {/* ...other paths... */}
-                  </Svg>
-                </View>
-                <View style={styles.locationText}>
-                  <Text style={styles.locationTitle}>Pizzaman Chicken</Text>
-                  <Text style={styles.locationSubtitle}>
-                    Mango Road, Kumasi
-                  </Text>
-                </View>
-              </View>
-            </View>
-               <View style={{ marginBottom: 8 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  padding: 10,
-                  borderRadius: 12,
-                  backgroundColor: '#fafafa',
-                  gap: 12,
-                }}
-                onTouchEnd={() =>
-                  handleLocationSelect('Landmark 1', {
-                    latitude: region.latitude + 0.0005,
-                    longitude: region.longitude + 0.0005,
-                  })
-                }
-              >
-                <View style={styles.iconContainer}>
-                  <Svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                    {/* ...SVG Paths... */}
-                    <Path d="M31 8H23V10H31V31H23V33H33V10C33 9.46957 32.7893 8.96086 32.4142 8.58579C32.0391 8.21071 31.5304 8 31 8Z" fill="black" fillOpacity="0.6"/>
-                    <Path d="M19.88 3H6.12C5.55774 3 5.01851 3.22336 4.62093 3.62093C4.22336 4.01851 4 4.55774 4 5.12V33H22V5.12C22 4.55774 21.7766 4.01851 21.3791 3.62093C20.9815 3.22336 20.4423 3 19.88 3ZM20 31H17V28H9V31H6V5.12C6 5.10424 6.0031 5.08864 6.00913 5.07408C6.01516 5.05952 6.024 5.04629 6.03515 5.03515C6.04629 5.024 6.05952 5.01516 6.07408 5.00913C6.08864 5.0031 6.10424 5 6.12 5H19.88C19.8958 5 19.9114 5.0031 19.9259 5.00913C19.9405 5.01516 19.9537 5.024 19.9649 5.03515C19.976 5.04629 19.9848 5.05952 19.9909 5.07408C19.9969 5.08864 20 5.10424 20 5.12V31Z" fill="black" fillOpacity="0.6"/>
-                    {/* ...other paths... */}
-                  </Svg>
-                </View>
-                <View style={styles.locationText}>
-                  <Text style={styles.locationTitle}>Pizzaman Chicken</Text>
-                  <Text style={styles.locationSubtitle}>
-                    Mango Road, Kumasi
-                  </Text>
-                </View>
-              </View>
-            </View>
-               <View style={{ marginBottom: 8 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  padding: 10,
-                  borderRadius: 12,
-                  backgroundColor: '#fafafa',
-                  gap: 12,
-                }}
-                onTouchEnd={() =>
-                  handleLocationSelect('Landmark 1', {
-                    latitude: region.latitude + 0.0005,
-                    longitude: region.longitude + 0.0005,
-                  })
-                }
-              >
-                <View style={styles.iconContainer}>
-                  <Svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                    {/* ...SVG Paths... */}
-                    <Path d="M31 8H23V10H31V31H23V33H33V10C33 9.46957 32.7893 8.96086 32.4142 8.58579C32.0391 8.21071 31.5304 8 31 8Z" fill="black" fillOpacity="0.6"/>
-                    <Path d="M19.88 3H6.12C5.55774 3 5.01851 3.22336 4.62093 3.62093C4.22336 4.01851 4 4.55774 4 5.12V33H22V5.12C22 4.55774 21.7766 4.01851 21.3791 3.62093C20.9815 3.22336 20.4423 3 19.88 3ZM20 31H17V28H9V31H6V5.12C6 5.10424 6.0031 5.08864 6.00913 5.07408C6.01516 5.05952 6.024 5.04629 6.03515 5.03515C6.04629 5.024 6.05952 5.01516 6.07408 5.00913C6.08864 5.0031 6.10424 5 6.12 5H19.88C19.8958 5 19.9114 5.0031 19.9259 5.00913C19.9405 5.01516 19.9537 5.024 19.9649 5.03515C19.976 5.04629 19.9848 5.05952 19.9909 5.07408C19.9969 5.08864 20 5.10424 20 5.12V31Z" fill="black" fillOpacity="0.6"/>
-                    {/* ...other paths... */}
-                  </Svg>
-                </View>
-                <View style={styles.locationText}>
-                  <Text style={styles.locationTitle}>Pizzaman Chicken</Text>
-                  <Text style={styles.locationSubtitle}>
-                    Mango Road, Kumasi
-                  </Text>
-                </View>
-              </View>
-            </View>
-            {/* Add more options as needed */}
+          <View style={{ flexDirection: 'column', gap: 12 }}>
+           {closeLandmarks && closeLandmarks.length > 0 && (
+            <View style={{ backgroundColor: 'white', padding: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center',}}>
+              {closeLandmarks.map((landmark, idx) => {
+                const parts = landmark.display_name.split(',').map(s => s.trim());
+                // Try to get city and state from the end of the array
+                const city = parts.length >= 4 ? parts[parts.length - 4] : '';
+                const state = parts.length >= 3 ? parts[parts.length - 3] : '';
+                return (
+  
+                  <View key={landmark.osm_id || idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, }}>
+
+                 
+                   <View style={styles.iconContainer}>
+                      <Svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                  <G clipPath="url(#clip0_6041_2093)">
+                                    <Path d="M13.7777 3.55554H10.2222V4.44443H13.7777V13.7778H10.2222V14.6667H14.6666V4.44443C14.6666 4.20868 14.573 3.98259 14.4063 3.81589C14.2396 3.64919 14.0135 3.55554 13.7777 3.55554Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M8.83561 1.33337H2.72005C2.47016 1.33337 2.2305 1.43264 2.0538 1.60934C1.8771 1.78605 1.77783 2.0257 1.77783 2.2756V14.6667H9.77783V2.2756C9.77783 2.0257 9.67856 1.78605 9.50186 1.60934C9.32516 1.43264 9.0855 1.33337 8.83561 1.33337ZM8.88894 13.7778H7.55561V12.4445H4.00005V13.7778H2.66672V2.2756C2.66672 2.26859 2.6681 2.26166 2.67078 2.25519C2.67346 2.24872 2.67739 2.24284 2.68234 2.23788C2.68729 2.23293 2.69317 2.229 2.69964 2.22632C2.70612 2.22364 2.71305 2.22226 2.72005 2.22226H8.83561C8.84261 2.22226 8.84955 2.22364 8.85602 2.22632C8.86249 2.229 8.86837 2.23293 8.87332 2.23788C8.87827 2.24284 8.8822 2.24872 8.88488 2.25519C8.88756 2.26166 8.88894 2.26859 8.88894 2.2756V13.7778Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M3.55554 3.55554H4.44443V4.44443H3.55554V3.55554Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M5.33337 3.55554H6.22226V4.44443H5.33337V3.55554Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M7.11108 3.55554H7.99997V4.44443H7.11108V3.55554Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M3.55554 5.77783H4.44443V6.66672H3.55554V5.77783Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M5.33337 5.77783H6.22226V6.66672H5.33337V5.77783Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M7.11108 5.77783H7.99997V6.66672H7.11108V5.77783Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M3.55554 8H4.44443V8.88889H3.55554V8Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M5.33337 8H6.22226V8.88889H5.33337V8Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M7.11108 8H7.99997V8.88889H7.11108V8Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M3.55554 10.2222H4.44443V11.1111H3.55554V10.2222Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M5.33337 10.2222H6.22226V11.1111H5.33337V10.2222Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M7.11108 10.2222H7.99997V11.1111H7.11108V10.2222Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M10.2222 5.77783H11.1111V6.66672H10.2222V5.77783Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M12 5.77783H12.8889V6.66672H12V5.77783Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M10.2222 8H11.1111V8.88889H10.2222V8Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M12 8H12.8889V8.88889H12V8Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M10.2222 10.2222H11.1111V11.1111H10.2222V10.2222Z" fill="black" fill-opacity="0.6"/>
+                                    <Path d="M12 10.2222H12.8889V11.1111H12V10.2222Z" fill="black" fill-opacity="0.6"/>
+                                  </G>
+                                  <Defs>
+                                  
+                                  </Defs>
+                      </Svg>
+                  </View>
+
+                  <View>
+                    <Text style={styles.locationTitle}>
+                     {landmark.name}
+                    </Text>
+                    <Text style={styles.locationSubtitle}>
+                      {city}, {state}
+                    </Text>
+                  
+                  </View>
+                  </View>
+      );
+    })}
+  </View>
+)}
           </View>
         </ScrollView>
        
        <View style={{
           display: openSearch === true ? 'none' : 'flex',
         }} >
-           <PrimaryButton title="Continue" onPress={function (): void {
-            throw new Error('Function not implemented.');
-          } } />
+           <PrimaryButton title="Continue" disabled={isDisabled} onPress={() => navigation.navigate('SelectCylinder' as never)}
+          />
        </View>
 
 
@@ -453,13 +380,15 @@ const styles = StyleSheet.create<{
     borderTopWidth: 1,
     borderTopColor: 'rgba(0, 0, 0, 0.1)',
     gap: 12,
-    borderTopRightRadius : 24,
-    borderTopLeftRadius : 24,
-    position: 'relative',
+    borderTopRightRadius: 24,
+    borderTopLeftRadius: 24,
+    position: 'absolute',
     zIndex: 1,
-   
-    // height: '90%',
-    // top is now set dynamically in the component
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0, // Cover from top to bottom
+    // Remove height property to allow full coverage
   },
   input: {
     flexDirection: 'row',

@@ -12,9 +12,7 @@ import {
 import MapView, { Marker, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Svg, { Path, Circle } from 'react-native-svg';
-// import 'mapbox-gl/dist/mapbox-gl.css';
-// import Map, { GeolocateControl, NavigationControl } from 'react-map-gl';
-
+import { useLocationContext } from '../../hooks/LocationContext'; 
 
 
 
@@ -49,8 +47,16 @@ function OpenStreetMapComponent() {
     longitudeDelta: 0.01,
   });
   const [isMapReady, setIsMapReady] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<Coordinates | null>(null);
-  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+  
+const {
+  selectedLocation,
+  setSelectedLocation,
+  userLocation,
+  setUserLocation,
+  closeLandmarks,
+  setCloseLandmarks,
+} = useLocationContext();
+
 
   useEffect(() => {
     console.log('Initial region:', region); // Debug initial region
@@ -115,7 +121,6 @@ function OpenStreetMapComponent() {
   }, []);
 
   
-
   const handleRefocusLocation = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
@@ -155,31 +160,31 @@ function OpenStreetMapComponent() {
     mapRef.current?.animateToRegion(region, TRANSITION_DURATION);
   };
 
-  const handleMapPress = async (e: any) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    setSelectedLocation({ latitude, longitude });
-    console.log('Selected location:', { latitude, longitude }); // Debug selected location
+ const handleMapPress = async (e: any) => {
+  const { latitude, longitude } = e.nativeEvent.coordinate;
+  setSelectedLocation({ latitude, longitude });
+  console.log('Selected location:', { latitude, longitude });
 
-    // Reverse geocoding to get location info
-    try {
-      const [place] = await Location.reverseGeocodeAsync({ latitude, longitude });
-      if (place) {
-        console.log('Location info:', {
-          name: place.name,
-          street: place.street,
-          city: place.city,
-          region: place.region,
-          country: place.country,
-          postalCode: place.postalCode,
-          isoCountryCode: place.isoCountryCode,
-        });
-      } else {
-        console.log('No location info found for these coordinates.');
-      }
-    } catch (error) {
-      console.error('Reverse geocoding error:', error);
-    }
-  };
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+    );
+    const data = await response.json();
+    console.log('Nominatim Place Info:', data);
+
+    // Optional: Get nearby places
+    const nearbyResponse = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=10&q=landmark&viewbox=${longitude - 0.01},${latitude + 0.01},${longitude + 0.01},${latitude - 0.01}&bounded=1`
+    );
+    const nearbyPlaces = await nearbyResponse.json();
+    console.log('Nearby Landmarks:', closeLandmarks);
+    setCloseLandmarks(nearbyPlaces);
+  
+  } catch (error) {
+    console.error('Nominatim error:', error);
+  }
+};
+
 
   // Helper to check if coordinates are valid
   const isValidCoordinates = (coords: Coordinates | null): coords is Coordinates => {
@@ -260,18 +265,7 @@ function OpenStreetMapComponent() {
       </TouchableOpacity>
 
       {/* OSM Attribution */}
-      <View style={styles.attribution}>
-        <Text style={styles.attributionText}>
-          Map data ©{' '}
-          <Text
-            style={styles.attributionLink}
-            onPress={() => Linking.openURL('https://www.openstreetmap.org/copyright')}
-          >
-            OpenStreetMap
-          </Text>{' '}
-          contributors
-        </Text>
-      </View>
+   
     </View>
   );
 }

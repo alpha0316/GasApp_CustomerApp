@@ -10,6 +10,8 @@ import OrderIDPage from '../Screens/OrderIDPage';
 import GeneralDetails from '../Screens/GeneralDetails';
 import SelectLocation from '../Screens/SelectLocation';
 import OpenStreetMapComponent from '../Screens/OpenStreetMapComponent';
+import SelectCylinder from '../Screens/SelectCylinder';
+import Amount from '../Screens/Amount';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +26,8 @@ export default function MainNav() {
       <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
       <Stack.Screen name="OTPVerification" component={OTPVerification} options={{ headerShown: false }} />
       <Stack.Screen name="SelectLocation" component={SelectLocation} options={{ headerShown: false }} />
+      <Stack.Screen name="SelectCylinder" component={SelectCylinder} options={{ headerShown: false }} />
+      <Stack.Screen name="Amount" component={Amount} options={{ headerShown: false }} />
       {/* <Stack.Screen name="OpenStreetMapComponent" component={OpenStreetMapComponent} options={{ headerShown: false }} /> */}
     </Stack.Navigator>
   );
