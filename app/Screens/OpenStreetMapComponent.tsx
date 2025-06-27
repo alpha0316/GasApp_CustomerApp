@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, use } from 'react';
 import {
   StyleSheet,
   View,
@@ -30,6 +30,14 @@ const LocationIcon = () => (
 interface Coordinates {
   latitude: number;
   longitude: number;
+  name?: string;
+  address?: any;
+  osm_id?: number;
+  osm_type?: string;
+  place_id?: number;
+  extratags?: any;
+  boundingbox?: any[];
+  display_name?: string;
 }
 
 function OpenStreetMapComponent() {
@@ -56,6 +64,27 @@ const {
   closeLandmarks,
   setCloseLandmarks,
 } = useLocationContext();
+useEffect(() => {
+  if (selectedLocation) {
+    // console.log('Selected Location Data:', selectedLocation);
+  }
+}, [selectedLocation]);
+
+// Helper to extend selectedLocation with extra info
+const updateSelectedLocation = (coords: Coordinates, info: any) => {
+  setSelectedLocation({
+    ...coords,
+    name: info.display_name || '',
+    address: info.address || {},
+    osm_id: info.osm_id,
+    osm_type: info.osm_type,
+    place_id: info.place_id,
+    extratags: info.extratags || {},
+    boundingbox: info.boundingbox || [],
+    // Add any other fields you want from the Nominatim response
+  });
+};
+
 
 
   useEffect(() => {
@@ -165,6 +194,40 @@ const {
   setSelectedLocation({ latitude, longitude });
   console.log('Selected location:', { latitude, longitude });
 
+  // Fetch location name from Nominatim
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+    );
+    const data = await response.json();
+    // console.log('Nominatim Place Info:', data);
+
+    // Update selected location with name/display_name
+    setSelectedLocation({
+      latitude,
+      longitude,
+      name: data.display_name || '',
+      address: data.address || {},
+      osm_id: data.osm_id,
+      osm_type: data.osm_type,
+      place_id: data.place_id,
+      extratags: data.extratags || {},
+      boundingbox: data.boundingbox || [],
+      display_name: data.display_name || '',
+    });
+
+    // Optional: Get nearby places
+    const nearbyResponse = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=10&q=landmark&viewbox=${longitude - 0.01},${latitude + 0.01},${longitude + 0.01},${latitude - 0.01}&bounded=1`
+    );
+    const nearbyPlaces = await nearbyResponse.json();
+    // console.log('Nearby Landmarks:', nearbyPlaces);
+    setCloseLandmarks(nearbyPlaces);
+
+  } catch (error) {
+    console.error('Nominatim error:', error);
+  }
+
   try {
     const response = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
@@ -214,7 +277,7 @@ const {
         onMapReady={handleMapReady}
         onPress={handleMapPress} // Handle map taps to place marker
       >
-        {/* OpenStreetMap Tiles */}
+
         <UrlTile
           urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maximumZ={19}
@@ -224,32 +287,35 @@ const {
         {/* User Location Marker */}
         {isMapReady && isValidCoordinates(userLocation) && (
           <Marker
-            coordinate={{
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-            }}
-            title="You are here"
+        coordinate={{
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+        }}
+        title="You are here"
           >
-            <View style={styles.userMarker}>
-              <Text style={styles.markerText}>You</Text>
-            </View>
+        <View style={styles.userMarker}>
+          <Text style={styles.markerText}>You</Text>
+        </View>
           </Marker>
         )}
 
         {/* Selected Location Marker */}
         {isMapReady && isValidCoordinates(selectedLocation) && (
           <Marker
-            coordinate={{
-              latitude: selectedLocation.latitude,
-              longitude: selectedLocation.longitude,
-            }}
-            title="Selected Location"
+        coordinate={{
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+        }}
+        title="Selected Location"
           >
+        <View style={{ alignItems: 'center' }}>
           <Svg width="53" height="57" viewBox="0 0 53 57" fill="none">
             <Circle cx="26.0596" cy="31" r="26" fill="#1A1A1A" fillOpacity={0.2}/>
             <Path d="M26.0596 0C31.5824 0 36.0596 4.47715 36.0596 10C36.0596 15.1853 32.1128 19.4474 27.0596 19.9492V30C27.0596 30.5523 26.6119 31 26.0596 31C25.5073 31 25.0596 30.5523 25.0596 30V19.9492C20.0063 19.4474 16.0596 15.1853 16.0596 10C16.0596 4.47715 20.5367 0 26.0596 0Z" fill="#34A853"/>
             <Circle cx="26.0596" cy="10" r="5" fill="white"/>
           </Svg>
+   
+        </View>
           </Marker>
         )}
       </MapView>

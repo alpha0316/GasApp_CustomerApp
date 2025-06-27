@@ -57,7 +57,7 @@ export default function SelectLocation() {
   const { selectedLocation, closeLandmarks } = useLocationContext();
 
   useEffect(() => {
-    console.log('CurrentLocation:', selectedLocation);
+    console.log('yes:', selectedLocation);
   },[closeLandmarks])
 
 
@@ -190,7 +190,18 @@ export default function SelectLocation() {
         </View>
 
         <TouchableOpacity
-          style={styles.locationOption}
+          style={{
+            ...styles.locationOption,
+            display: 'flex' ,
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 12,
+            borderWidth: 1,
+            borderColor: currentLocation ? 'black'  :  'rgba(0, 0, 0, 0.1)',
+            borderRadius: 16,
+            gap: 12,
+            backgroundColor: '#fafafa',
+          }}
           activeOpacity={0.7}
           onPress={async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
@@ -211,6 +222,12 @@ export default function SelectLocation() {
             handleLocationSelect('Current Location', newRegion);
             setOpenSearch(false);
             setCloseSearch(true);
+
+            // Clear selectedLocation
+            if (typeof useLocationContext === 'function') {
+              const { setSelectedLocation } = useLocationContext();
+              if (setSelectedLocation) setSelectedLocation(null);
+            }
           }}
         >
           <View style={styles.iconContainer}>
@@ -221,13 +238,90 @@ export default function SelectLocation() {
               />
             </Svg>
           </View>
-          <View style={styles.locationText}>
+          <View style={[styles.locationText, { flex: 1 }]}>
             <Text style={styles.locationTitle}>Use Current Location</Text>
             <Text style={styles.locationSubtitle}>
               Save time by selecting your current location
             </Text>
           </View>
+
+          { currentLocation ? 
+
+            <Svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <Path d="M12 2C6.49 2 2 6.49 2 12C2 17.51 6.49 22 12 22C17.51 22 22 17.51 22 12C22 6.49 17.51 2 12 2ZM16.78 9.7L11.11 15.37C10.97 15.51 10.78 15.59 10.58 15.59C10.38 15.59 10.19 15.51 10.05 15.37L7.22 12.54C6.93 12.25 6.93 11.77 7.22 11.48C7.51 11.19 7.99 11.19 8.28 11.48L10.58 13.78L15.72 8.64C16.01 8.35 16.49 8.35 16.78 8.64C17.07 8.93 17.07 9.4 16.78 9.7Z" fill="black"/>
+            </Svg>
+            :
+            <View
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 24,
+                    borderWidth: 1,
+                    borderColor: 'rgba(0,0,0,0.2)',
+                    marginLeft: 8,
+                    alignSelf: 'center',
+                  }}
+                />
+          }   
         </TouchableOpacity>
+
+        
+        <View
+          style={{
+            display: openSearch ? 'none' : 'flex',
+               flexDirection: 'row',
+                alignItems: 'center',
+                padding: 12,
+                borderWidth: 1,
+                borderColor: selectedLocation ? 'rgba(0, 0, 0, 1)' : 'rgba(0, 0, 0, 0.1)',
+                borderRadius: 16,
+                gap: 12,
+                backgroundColor : selectedLocation ? '#fafafa' : 'white',
+          }}
+        >
+          <View style={styles.iconContainer}>
+          {selectedLocation ? (
+            <Svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <Path d="M13.7465 5.80004C13.0532 2.71337 10.3598 1.33337 7.99983 1.33337C7.99983 1.33337 7.99983 1.33337 7.99317 1.33337C5.63983 1.33337 2.95317 2.71337 2.25317 5.79337C1.4665 9.23337 3.57317 12.1467 5.47983 13.9867C6.1865 14.6667 7.09317 15.0067 7.99983 15.0067C8.9065 15.0067 9.81317 14.6667 10.5132 13.9867C12.4198 12.1467 14.5265 9.24004 13.7465 5.80004ZM10.1865 6.35337L7.51983 9.02004C7.41983 9.12004 7.29317 9.16671 7.1665 9.16671C7.03983 9.16671 6.91317 9.12004 6.81317 9.02004L5.81317 8.02004C5.61983 7.82671 5.61983 7.50671 5.81317 7.31337C6.0065 7.12004 6.3265 7.12004 6.51983 7.31337L7.1665 7.96004L9.47983 5.64671C9.67317 5.45337 9.99317 5.45337 10.1865 5.64671C10.3798 5.84004 10.3798 6.16004 10.1865 6.35337Z" fill="black"/>
+            </Svg>
+          ) : (
+            <Svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <Path d="M13.7465 5.80004C13.0532 2.71337 10.3598 1.33337 7.99983 1.33337C7.99983 1.33337 7.99983 1.33337 7.99317 1.33337C5.63983 1.33337 2.95317 2.71337 2.25317 5.79337C1.4665 9.23337 3.57317 12.1467 5.47983 13.9867C6.1865 14.6667 7.09317 15.0067 7.99983 15.0067C8.9065 15.0067 9.81317 14.6667 10.5132 13.9867C12.4198 12.1467 14.5265 9.24004 13.7465 5.80004ZM10.1865 6.35337L7.51983 9.02004C7.41983 9.12004 7.29317 9.16671 7.1665 9.16671C7.03983 9.16671 6.91317 9.12004 6.81317 9.02004L5.81317 8.02004C5.61983 7.82671 5.61983 7.50671 5.81317 7.31337C6.0065 7.12004 6.3265 7.12004 6.51983 7.31337L7.1665 7.96004L9.47983 5.64671C9.67317 5.45337 9.99317 5.45337 10.1865 5.64671C10.3798 5.84004 10.3798 6.16004 10.1865 6.35337Z" fill="#00000060"/>
+            </Svg>
+          )}
+          </View>
+          <View style={[styles.locationText, { flex: 1 }]}>
+            <Text style={styles.locationTitle}>Selected Location</Text>
+            <Text style={styles.locationSubtitle}>
+
+              {
+                selectedLocation
+                  ? (selectedLocation.name?.split(',')[0] || 'Custom Location')
+                  : 'Your selected pickup point will appear here'
+              }
+            </Text>
+          </View>
+
+          { selectedLocation ? 
+
+          <Svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <Path d="M12 2C6.49 2 2 6.49 2 12C2 17.51 6.49 22 12 22C17.51 22 22 17.51 22 12C22 6.49 17.51 2 12 2ZM16.78 9.7L11.11 15.37C10.97 15.51 10.78 15.59 10.58 15.59C10.38 15.59 10.19 15.51 10.05 15.37L7.22 12.54C6.93 12.25 6.93 11.77 7.22 11.48C7.51 11.19 7.99 11.19 8.28 11.48L10.58 13.78L15.72 8.64C16.01 8.35 16.49 8.35 16.78 8.64C17.07 8.93 17.07 9.4 16.78 9.7Z" fill="black"/>
+          </Svg>
+       
+            :
+            <View
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 24,
+                    borderWidth: 1,
+                    borderColor: 'rgba(0,0,0,0.2)',
+                    marginLeft: 8,
+                    alignSelf: 'center',
+                  }}
+                />
+          }   
+        </View>
 
         <ScrollView
           style={{ maxHeight: 320, display: openSearch ? 'flex' : 'none' }}

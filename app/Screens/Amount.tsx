@@ -56,9 +56,17 @@ const isButtonDisabled = !amount
 
   return (
     <View style={styles.main}>
-      <View style={styles.header}>
-        <BackButton />
-        <Text style={{ fontSize: 18, fontWeight: '700' }}>Amount</Text>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        marginBottom: 16,
+      }}>
+        <View style={{ position: 'absolute', left: 0 }}>
+          <BackButton />
+        </View>
+        <Text style={{ fontSize: 18, fontWeight: '700', textAlign: 'center' }}>Amount</Text>
       </View>
       <View style={styles.inputWrapper}>
         <Text style={styles.label}>Enter Amount You Want To Buy</Text>
