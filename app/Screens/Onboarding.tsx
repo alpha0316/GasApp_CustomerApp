@@ -1,32 +1,118 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook from react-navigation
 import PrimaryButton from '@/components/PrimaryButton';
-import Svg, { Path, Circle } from 'react-native-svg';
 import Slider from '@react-native-community/slider';
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook from react-navigation
+import React, { useEffect, useRef, useState, } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 
 
 export default function Onboarding() {
 
-  const navigation = useNavigation(); // Initialize navigation hook
+  const navigation = useNavigation(); 
+    const [afterDelay, setAfterDelay] = useState(false);
+    const [sliderValue, setSliderValue] = useState(0)
+      const [amount, setAmount] = useState(''); 
+        const [selectedKg, setSelectedKg] = useState(2)
+        const [pricePerKg, setPricePerKg] = useState(5)
 
+  const handleSliderChange = (value) => {
+    setSliderValue(value)
+
+    const kg = 2 + Math.round(value * 22)
+    setSelectedKg(kg)
+
+    const calculatedPrice = kg * pricePerKg
+    setAmount(calculatedPrice.toFixed(2))
+    // console.log(calculatedPrice.toFixed(3))
+  }
+
+
+   const topAnim = useRef(new Animated.Value(-200)).current; // Start at -70  
+    useEffect(() => {
+      Animated.timing(topAnim, {
+        toValue: afterDelay ? -100 : 0,
+        duration: 900,
+        useNativeDriver: true, // Use native driver for better performance
+      }).start();
+    }, [afterDelay]);
+
+
+
+const opacityRegular = useRef(new Animated.Value(0)).current; // Start at 0 (fully transparent)
+
+useEffect(() => {
+  Animated.timing(opacityRegular, {
+    toValue: afterDelay ? 0.3 : 1, // Fade to 0.8 or 1 (fully opaque)
+    duration: 100,
+    useNativeDriver: true,
+  }).start();
+}, [afterDelay]);
+
+const opacitySlider = useRef(new Animated.Value(0)).current; // Start at 0 (fully transparent)
+
+useEffect(() => {
+  Animated.timing(opacitySlider, {
+    toValue: afterDelay ? 0.3 : 1, // Fade to 0.8 or 1 (fully opaque)
+    duration: 2000,
+    useNativeDriver: true,
+  }).start();
+}, [afterDelay]);
+
+const Filling = useRef(new Animated.Value(0)).current; // Start at 0 (fully transparent)
+
+useEffect(() => {
+  Animated.timing(Filling, {
+    toValue: afterDelay ? 0.3 : 1, // Fade to 0.8 or 1 (fully opaque)
+    duration: 3000,
+    useNativeDriver: true,
+  }).start();
+}, [afterDelay]);
+
+const filled = useRef(new Animated.Value(0)).current; // Start at 0 (fully transparent)
+
+useEffect(() => {
+  Animated.timing(filled, {
+    toValue: afterDelay ? 0.3 : 1, // Fade to 0.8 or 1 (fully opaque)
+    duration: 4000,
+    useNativeDriver: true,
+  }).start();
+}, [afterDelay]);
+
+const H1 = useRef(new Animated.Value(0)).current; // Start at 0 (fully transparent)
+
+useEffect(() => {
+  Animated.timing(H1, {
+    toValue: afterDelay ? 0.3 : 1, // Fade to 0.8 or 1 (fully opaque)
+    duration: 4000,
+    useNativeDriver: true,
+  }).start();
+}, [afterDelay]);
 
   return (
     <View style={styles.main}>
 
-      <Text style={{ fontSize: 20, fontWeight: 'bold', textAlign: 'left' }}>Gas<Text style={{
-        color : 'rgba(0,0,0,0.5)'
-      }}>App</Text> </Text>
+      <Animated.Text style={{ 
+        fontSize: 20, 
+        fontWeight: 'bold', 
+        textAlign: 'left',  
+        transform: [{ translateY: topAnim }]
+      }}>
+        Gas
+        <Text style={{
+          color : 'rgba(0,0,0,0.5)'
+        }}>App</Text>
+      </Animated.Text>
 
-      <View style={{
+      <Animated.View style={{
         display : 'flex',
         gap : 24,
         padding : 16,
         alignItems : 'flex-start',
         backgroundColor : '#f4f4f4',
         borderRadius : 16,
-        opacity : .8
+        opacity : opacityRegular,
+        // transform: [{ translateY: topAnim }]
       }}>
         <View style={{
           display : 'flex',
@@ -70,27 +156,28 @@ export default function Onboarding() {
           width : 240,
           height : 14,
           borderRadius : 12,
-          backgroundColor : '#D0D3DA'
+          backgroundColor : '#E2E4E9'
         }}></View>
           <View style={{
           width : 300,
           height : 14,
           borderRadius : 12,
-          backgroundColor : '#D0D3DA'
+          backgroundColor : '#E2E4E9'
         }}></View>
         </View>
-      </View>
+      </Animated.View>
 
-       <View style={{
+       <Animated.View style={{
         display : 'flex',
         gap : 24,
         padding : 16,
         alignItems : 'flex-start',
         backgroundColor : '#FAFAFA',
         borderRadius : 16,
-        opacity : .8,
+        opacity : opacitySlider,
         borderWidth : 1,
-        borderColor : 'rgba(0,0,0,0.1)'
+        borderColor : 'rgba(0,0,0,0.1)',
+        // transform: [{ translateY: topAnim }]
       }}>
         <View style={{
           display : 'flex',
@@ -120,12 +207,12 @@ export default function Onboarding() {
             backgroundColor : '#fafafa',
             color : 'rgba(0,0,0,0.5)'
            }}>
-            10Kg
+            {selectedKg} Kg
            </Text>
            <Text style={{
             fontSize : 18,
             fontWeight : 'bold'
-          }}>GHC 50.00</Text>
+          }}>GHC {amount || 120}</Text>
           </View>   
         </View>
 
@@ -137,37 +224,38 @@ export default function Onboarding() {
               maximumValue={1}
               minimumTrackTintColor="#000000"
               maximumTrackTintColor='rgba(0,0,0,0.1)'
-              value={10}
-              // onValueChange={handleSliderChange}
+              value={5}
+              onValueChange={handleSliderChange}
               />
  
           <View style={{
           width : 240,
           height : 14,
           borderRadius : 12,
-          backgroundColor : '#D0D3DA'
+          backgroundColor : '#E2E4E9'
         }}></View>
     
 
 
-      </View>
+      </Animated.View>
 
       <View style={{
         width : 1,
-        height : 40,
+        height : 30,
         backgroundColor : 'rgba(0,0,0,0.2)',
         position : 'relative',
         left : 40,
         top : -24
       }}></View>
 
-      <View style={{
+      <Animated.View style={{
         paddingHorizontal : 24,
         alignItems : 'center',
         gap : 12,
         justifyContent : 'flex-start',
         flexDirection : 'row',
-        top : -40
+        top : -40,
+        opacity : Filling,
       }}>
 
         <View style={{
@@ -191,11 +279,11 @@ export default function Onboarding() {
            }}>
             Completed 
            </Text>
-      </View>
+      </Animated.View>
 
         <View style={{
         width : 1,
-        height : 40,
+        height : 30,
         // backgroundColor : 'rgba(0,0,0,0.2)',
         position : 'relative',
         left : 40,
@@ -207,13 +295,15 @@ export default function Onboarding() {
         
       }}></View>
 
-          <View style={{
+      <Animated.View style={{
         paddingHorizontal : 24,
         alignItems : 'center',
         gap : 12,
         justifyContent : 'flex-start',
         flexDirection : 'row',
-        top : -70
+        top : -70,
+        left : -3,
+        opacity : filled,
       }}>
 
         <View style={{
@@ -255,17 +345,19 @@ export default function Onboarding() {
         </View>
         </View>
         </View>
-      </View>
+      </Animated.View>
 
-      <Text style={{
+      <Animated.Text style={{
         fontSize : 28,
         textAlign : 'center',
-        fontWeight : '700'
+        fontWeight : '700',
+        marginTop : 30,
+        opacity : H1,
       }}>
         Your Hassle-Free Solution for  <Text style={{
           color : 'rgba(0,0,0,0.5)'
         }}>Convenient LPG refills</Text>
-      </Text>
+      </Animated.Text>
        
         <PrimaryButton title='Get Started' onPress={() => navigation.navigate('PhoneNumber')}/>
     </View>
@@ -276,7 +368,7 @@ const styles = StyleSheet.create({
   main: {
     position : 'relative',
     gap : 24,
-    paddingHorizontal : 12,
+    paddingHorizontal : 16,
     display : 'flex',
     width : 'auto',
     backgroundColor : 'white'
