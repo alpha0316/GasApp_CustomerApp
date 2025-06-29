@@ -4,8 +4,6 @@ import PrimaryButton from '@/components/PrimaryButton';
 import BackButton from '@/components/BackButton';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FIREBASE_AUTH } from '../firebaseConfig';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 export default function GeneralDetails() {
   const navigation = useNavigation();
@@ -72,7 +70,7 @@ export default function GeneralDetails() {
         value={firstName}
         onChangeText={setFirstName}
         returnKeyType="next"
-        onSubmitEditing={() => handleNext(lastNameRef)}
+        onSubmitEditing={() => handleNext(NameRef)}
         placeholder='Enter your first name'
       />
       <Text style={styles.label}>Last Name</Text>

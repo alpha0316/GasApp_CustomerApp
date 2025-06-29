@@ -66,24 +66,24 @@ const {
 } = useLocationContext();
 useEffect(() => {
   if (selectedLocation) {
-    // console.log('Selected Location Data:', selectedLocation);
+    // console.log('Selected  Data:', userLocation);
   }
 }, [selectedLocation]);
 
 // Helper to extend selectedLocation with extra info
-const updateSelectedLocation = (coords: Coordinates, info: any) => {
-  setSelectedLocation({
-    ...coords,
-    name: info.display_name || '',
-    address: info.address || {},
-    osm_id: info.osm_id,
-    osm_type: info.osm_type,
-    place_id: info.place_id,
-    extratags: info.extratags || {},
-    boundingbox: info.boundingbox || [],
-    // Add any other fields you want from the Nominatim response
-  });
-};
+// const updateSelectedLocation = (coords: Coordinates, info: any) => {
+//   setSelectedLocation({
+//     ...coords,
+//     name: info.display_name || '',
+//     address: info.address || {},
+//     osm_id: info.osm_id,
+//     osm_type: info.osm_type,
+//     place_id: info.place_id,
+//     extratags: info.extratags || {},
+//     boundingbox: info.boundingbox || [],
+//     // Add any other fields you want from the Nominatim response
+//   });
+// };
 
 
 
@@ -189,20 +189,20 @@ const updateSelectedLocation = (coords: Coordinates, info: any) => {
     mapRef.current?.animateToRegion(region, TRANSITION_DURATION);
   };
 
+
+
  const handleMapPress = async (e: any) => {
   const { latitude, longitude } = e.nativeEvent.coordinate;
-  setSelectedLocation({ latitude, longitude });
-  console.log('Selected location:', { latitude, longitude });
+  setSelectedLocation({ latitude, longitude })
 
-  // Fetch location name from Nominatim
   try {
     const response = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
     );
     const data = await response.json();
-    // console.log('Nominatim Place Info:', data);
+  
 
-    // Update selected location with name/display_name
+  
     setSelectedLocation({
       latitude,
       longitude,
@@ -216,7 +216,7 @@ const updateSelectedLocation = (coords: Coordinates, info: any) => {
       display_name: data.display_name || '',
     });
 
-    // Optional: Get nearby places
+   
     const nearbyResponse = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&limit=10&q=landmark&viewbox=${longitude - 0.01},${latitude + 0.01},${longitude + 0.01},${latitude - 0.01}&bounded=1`
     );
@@ -233,14 +233,14 @@ const updateSelectedLocation = (coords: Coordinates, info: any) => {
       `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
     );
     const data = await response.json();
-    console.log('Nominatim Place Info:', data);
+    // console.log('Nominatim Place Info:', data);
 
     // Optional: Get nearby places
     const nearbyResponse = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&limit=10&q=landmark&viewbox=${longitude - 0.01},${latitude + 0.01},${longitude + 0.01},${latitude - 0.01}&bounded=1`
     );
     const nearbyPlaces = await nearbyResponse.json();
-    console.log('Nearby Landmarks:', closeLandmarks);
+    // console.log('Nearby Landmarks:', closeLandmarks);
     setCloseLandmarks(nearbyPlaces);
   
   } catch (error) {
@@ -249,7 +249,6 @@ const updateSelectedLocation = (coords: Coordinates, info: any) => {
 };
 
 
-  // Helper to check if coordinates are valid
   const isValidCoordinates = (coords: Coordinates | null): coords is Coordinates => {
     return (
       coords !== null &&
@@ -320,7 +319,6 @@ const updateSelectedLocation = (coords: Coordinates, info: any) => {
         )}
       </MapView>
 
-      {/* Refocus Button */}
       <TouchableOpacity
         style={styles.refocusButton}
         onPress={handleRefocusLocation}

@@ -41,7 +41,7 @@ export default function Amount() {
 //     setTotalCost(calculatedTotalCost);
 //   }, [amount, offerPrice, price]);
 
-  const handleSliderChange = (value) => {
+  const handleSliderChange = (value: number) => {
     setSliderValue(value)
 
     const kg = 2 + Math.round(value * 22)
@@ -183,7 +183,7 @@ const isButtonDisabled = !amount
         <Text style={{ fontWeight: '700', fontSize: 18 }}>Cost Summary</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Regualar</Text>
-          <Text style={styles.price}>GHC .00</Text>
+          <Text style={styles.priceText}>GHC .00</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Cylinder Size</Text>
@@ -199,7 +199,7 @@ const isButtonDisabled = !amount
           <Text>GHC {totalCost}.00</Text>
         </View>
         <PrimaryButton title={'Continue'} 
-        onPress={() => navigation.navigate('Payment')}
+        onPress={() => navigation.navigate('Payment' as never)}
         disabled={isButtonDisabled}
         />
       </View>

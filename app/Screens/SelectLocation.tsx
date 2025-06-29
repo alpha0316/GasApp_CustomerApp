@@ -15,14 +15,23 @@ import OpenStreetMapComponent from './OpenStreetMapComponent';
 import { ScrollView } from 'react-native';
 import { useLocationContext } from '../../hooks/LocationContext'; 
 
+type Coordinates = {
+  name?: string;
+  latitude: number;
+  longitude: number;
+  latitudeDelta?: number;
+  longitudeDelta?: number;
+};
+
 
 export default function SelectLocation() {
   const navigation = useNavigation();
 //   const route = useRoute();
 
-  const [currentLocation, setCurrentLocation] = useState('');
+  const [currentLocation, setCurrentLocation] = useState<(string | number)[] | null>(null);
   const [openSearch, setOpenSearch] = useState(false);
   const [clostSearch, setCloseSearch] = useState(false);
+  const [orderLocation, setOrderLocation] = useState<Coordinates | null>(null)
   const [region, setRegion] = useState({
     latitude: 6.67618,
     longitude: -1.56236,
@@ -30,6 +39,8 @@ export default function SelectLocation() {
     longitudeDelta: 0.01, 
   });
   const [marker, setMarker] = useState<{ latitude: number; longitude: number; latitudeDelta?: number; longitudeDelta?: number } | null>(null);
+
+
 
   useEffect(() => {
     (async () => {
@@ -52,12 +63,29 @@ export default function SelectLocation() {
     })();
   }, []);
 
+  useEffect(() => {
+    console.log('Region updated:', region);
+  }, [region]);
+
   const isDisabled = !currentLocation || !marker;
 
-  const { selectedLocation, closeLandmarks } = useLocationContext();
+  const { selectedLocation, closeLandmarks, userLocation, setSelectedLocation } = useLocationContext();
+
+    useEffect(() => {
+      if (currentLocation) {
+        setOrderLocation(currentLocation);
+        setSelectedLocation(null);
+        console.log('eass', orderLocation)
+      } else if (selectedLocation) {
+        setOrderLocation(selectedLocation);
+        // setCurrentLocation('');
+        console.log('eass', orderLocation)
+      }
+    }, [currentLocation, selectedLocation]);
 
   useEffect(() => {
-    console.log('yes:', selectedLocation);
+    // console.log('yes:', userLocation);
+     console.log('no:', selectedLocation);
   },[closeLandmarks])
 
 
@@ -69,10 +97,20 @@ export default function SelectLocation() {
   const updateAddress = async ({ latitude, longitude }: { latitude: number; longitude: number }): Promise<void> => {
     try {
       const [address] = await Location.reverseGeocodeAsync({ latitude, longitude });
-      setCurrentLocation(address ? `${address.street || ''}, ${address.city || ''}` : 'Custom Location');
+      // Store address, longitude, and latitude in an array in currentLocation
+      setCurrentLocation([
+        address ? `${address.street || ''}, ${address.city || ''}` : 'Custom Location',
+        longitude,
+        latitude
+      ]);
+      // console.log('active', [
+      //   address ? `${address.street || ''}, ${address.city || ''}` : 'Custom Location',
+      //   longitude,
+      //   latitude
+      // ]);
     } catch (error) {
       console.warn('Reverse geocoding failed:', error);
-      setCurrentLocation('Custom Location');
+      setCurrentLocation(['Custom Location', longitude, latitude]);
     }
   };
 
@@ -203,32 +241,13 @@ export default function SelectLocation() {
             backgroundColor: '#fafafa',
           }}
           activeOpacity={0.7}
-          onPress={async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-              alert('Permission to access location was denied.');
-              return;
-            }
-            let location = await Location.getCurrentPositionAsync({});
-            const newRegion = {
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            };
-            setRegion(newRegion);
-            setMarker(newRegion);
-            updateAddress(newRegion);
-            handleLocationSelect('Current Location', newRegion);
-            setOpenSearch(false);
-            setCloseSearch(true);
+          onPress={() => {
+              setOpenSearch(false);
+              setCloseSearch(true);
+              // setOrderLocation(userLocation)
 
-            // Clear selectedLocation
-            if (typeof useLocationContext === 'function') {
-              const { setSelectedLocation } = useLocationContext();
-              if (setSelectedLocation) setSelectedLocation(null);
-            }
-          }}
+        // Clear selectedLocation
+      }}
         >
           <View style={styles.iconContainer}>
             <Svg width="16" height="17" viewBox="0 0 16 17" fill="none">
@@ -241,7 +260,12 @@ export default function SelectLocation() {
           <View style={[styles.locationText, { flex: 1 }]}>
             <Text style={styles.locationTitle}>Use Current Location</Text>
             <Text style={styles.locationSubtitle}>
-              Save time by selecting your current location
+              
+                {
+                currentLocation
+                  ? currentLocation[0] 
+                  : 'Save time by selecting your current location'
+              }
             </Text>
           </View>
 
