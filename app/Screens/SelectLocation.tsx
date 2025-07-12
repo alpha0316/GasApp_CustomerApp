@@ -15,6 +15,7 @@ import OpenStreetMapComponent from './OpenStreetMapComponent';
 import { ScrollView } from 'react-native';
 import { useLocationContext } from '../../hooks/LocationContext'; 
 
+
 type Coordinates = {
   name?: string;
   latitude: number;
@@ -28,7 +29,7 @@ export default function SelectLocation() {
   const navigation = useNavigation();
 //   const route = useRoute();
 
-  const [currentLocation, setCurrentLocation] = useState<(string | number)[] | null>(null);
+  // const [currentLocation, setCurrentLocation] = useState<(string | number)[] | null>(null);
   const [openSearch, setOpenSearch] = useState(false);
   const [clostSearch, setCloseSearch] = useState(false);
   const [orderLocation, setOrderLocation] = useState<Coordinates | null>(null)
@@ -40,6 +41,10 @@ export default function SelectLocation() {
   });
   const [marker, setMarker] = useState<{ latitude: number; longitude: number; latitudeDelta?: number; longitudeDelta?: number } | null>(null);
 
+const {
+currentLocation, setCurrentLocation
+  
+} = useLocationContext();
 
 
   useEffect(() => {
@@ -74,12 +79,12 @@ export default function SelectLocation() {
     useEffect(() => {
       if (currentLocation) {
         setOrderLocation(currentLocation);
-        setSelectedLocation(null);
-        console.log('eass', orderLocation)
+        // setSelectedLocation(null);
+        console.log('OrderLocation-current', orderLocation)
       } else if (selectedLocation) {
         setOrderLocation(selectedLocation);
-        // setCurrentLocation('');
-        console.log('eass', orderLocation)
+        // setCurrentLocation(null);
+        console.log('OrderLocation-selected', orderLocation)
       }
     }, [currentLocation, selectedLocation]);
 
@@ -244,6 +249,7 @@ export default function SelectLocation() {
           onPress={() => {
               setOpenSearch(false);
               setCloseSearch(true);
+              setSelectedLocation(null);
               // setOrderLocation(userLocation)
 
         // Clear selectedLocation

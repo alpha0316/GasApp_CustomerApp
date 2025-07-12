@@ -3,7 +3,11 @@ import { StyleSheet, View, Text } from 'react-native';
 import PrimaryButton from '@/components/PrimaryButton';
 import BackButton from '@/components/BackButton';
 import SecondaryButton from '@/components/SecondaryButton';
+import PrimaryButtonSwipe from '@/components/PrimaryButtonSwipe';
 import { useNavigation, useRoute } from '@react-navigation/native';
+
+
+
 
 export default function Payment() {
   const [selectedNetwork, setSelectedNetwork] = useState(null);
@@ -12,20 +16,24 @@ export default function Payment() {
   const route = useRoute();
 //   const { offerName, offerPrice, price, totalCost, amount } = route.params;
 
-  const handleNetworkSelection = (network) => {
+  const handleNetworkSelection = (network : any) => {
     setSelectedNetwork(network);
   };
+
+
 
   return (
     <View style={styles.main}>
       <View style={{
-         flexDirection: 'row',
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
         marginBottom: 16,
       }}>
-        <BackButton />
+        <View style={{ position: 'absolute', left: 0 }}>
+          <BackButton />
+        </View>
         <Text style={{ fontSize: 18, fontWeight: '700' }}>Mobile Money Number</Text>
       </View>
     
@@ -70,7 +78,7 @@ export default function Payment() {
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Total Cost</Text>
           <Text>GHC .00</Text>
         </View>
-        <PrimaryButton title={'Make Payment'} onPress={() => navigation.navigate('Tracker')} />
+        <PrimaryButtonSwipe title={'Swipe To Pay'} onPress={() => navigation.navigate('Tracker')} />
       </View>
     </View>
   );

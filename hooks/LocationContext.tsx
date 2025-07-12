@@ -15,12 +15,19 @@ interface LocationContextType {
   setCloseLandmarks: (landmarks: any[]) => void;
 }
 
+interface LocationContextType {
+  currentLocation: Location | null;
+  setCurrentLocation: (loc: Location) => void;
+}
+
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedLocation, setSelectedLocation] = useState<Coordinates | null>(null);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [closeLandmarks, setCloseLandmarks] = useState<any[]>([]);
+  const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
+
 
   return (
     <LocationContext.Provider
@@ -31,6 +38,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setUserLocation,
         closeLandmarks,
         setCloseLandmarks,
+        currentLocation, 
+        setCurrentLocation
       }}
     >
       {children}

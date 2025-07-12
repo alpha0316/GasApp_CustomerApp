@@ -64,26 +64,19 @@ const {
   closeLandmarks,
   setCloseLandmarks,
 } = useLocationContext();
+
+
 useEffect(() => {
   if (selectedLocation) {
     // console.log('Selected  Data:', userLocation);
   }
 }, [selectedLocation]);
 
-// Helper to extend selectedLocation with extra info
-// const updateSelectedLocation = (coords: Coordinates, info: any) => {
-//   setSelectedLocation({
-//     ...coords,
-//     name: info.display_name || '',
-//     address: info.address || {},
-//     osm_id: info.osm_id,
-//     osm_type: info.osm_type,
-//     place_id: info.place_id,
-//     extratags: info.extratags || {},
-//     boundingbox: info.boundingbox || [],
-//     // Add any other fields you want from the Nominatim response
-//   });
-// };
+  const { 
+     currentLocation,
+     setCurrentLocation,
+   } = useLocationContext();
+
 
 
 
@@ -187,13 +180,15 @@ useEffect(() => {
     setIsMapReady(true);
     console.log('Map ready, setting region:', region); // Debug map ready
     mapRef.current?.animateToRegion(region, TRANSITION_DURATION);
+
   };
 
-
+  
 
  const handleMapPress = async (e: any) => {
   const { latitude, longitude } = e.nativeEvent.coordinate;
   setSelectedLocation({ latitude, longitude })
+      // setCurrentLocation([])
 
   try {
     const response = await fetch(
@@ -215,7 +210,7 @@ useEffect(() => {
       boundingbox: data.boundingbox || [],
       display_name: data.display_name || '',
     });
-
+    // setCurrentLocation(null)
    
     const nearbyResponse = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&limit=10&q=landmark&viewbox=${longitude - 0.01},${latitude + 0.01},${longitude + 0.01},${latitude - 0.01}&bounded=1`
