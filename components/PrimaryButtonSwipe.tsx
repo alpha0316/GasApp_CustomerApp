@@ -125,11 +125,15 @@ const PrimaryButtonSwipe: React.FC<PrimaryButtonProps> = ({
         {title}
       </Animated.Text>
       <PanGestureHandler onGestureEvent={gestureHandler} enabled={!disabled}>
-        <Animated.View style={[styles.swipeable, animatedStyle]} />
+        <Animated.View style={[styles.swipeable, animatedStyle]}> 
+            <Text>⛽️</Text>
+        </Animated.View>
       </PanGestureHandler>
     </Animated.View>  
   );
 };
+
+///⛽️
 
 const styles = StyleSheet.create({
    button: {
@@ -169,6 +173,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    display : 'flex',
+    alignItems : 'center',
+    justifyContent : 'center'
   },
 });
 

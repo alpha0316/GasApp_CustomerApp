@@ -17,7 +17,8 @@ import Svg, { Path, G, Defs } from 'react-native-svg';
 import BackButton from '@/components/BackButton';
 import PrimaryButton from '@/components/PrimaryButton';
 import OpenStreetMapComponent from './OpenStreetMapComponent';
-import { useLocationContext } from '../../hooks/LocationContext';
+import { useLocationContext } from '../../hooks/LocationContext'
+import { useRoute } from '@react-navigation/native';
 
 // Types
 interface Coordinates {
@@ -30,6 +31,8 @@ interface Coordinates {
     name?: string;
   };
 }
+
+
 
 interface Region {
   latitude: number;
@@ -130,6 +133,16 @@ const SelectLocation: React.FC = () => {
   const navigation = useNavigation();
   const { currentLocation, setCurrentLocation } = useLocationContext();
   const { hasPermission, requestPermission } = useLocationPermission();
+  const route = useRoute();
+  
+  // 🔥 UPDATED: Get previous screen data with defaults
+  const { 
+    offerName = '', 
+    offerPrice = '', 
+    offerId = '',
+    // Add any other parameters you expect from previous screens
+    ...otherParams 
+  } = route.params || {};
 
   // State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -138,6 +151,45 @@ const SelectLocation: React.FC = () => {
   const [selectedLocation, setSelectedLocation] = useState<Coordinates | null>(null);
   const [useCurrentLocation, setUseCurrentLocation] = useState(true);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+  // 🔥 NEW: Prepare location data to send to next screen
+  const getLocationDataToPass = useCallback(() => {
+    let locationData = {};
+    
+    if (useCurrentLocation && currentLocation) {
+      if (typeof currentLocation === 'string') {
+        locationData = {
+          locationName: currentLocation,
+          locationType: 'current'
+        };
+      } else if (Array.isArray(currentLocation) && currentLocation.length > 0) {
+        locationData = {
+          locationName: String(currentLocation[0] ?? ''),
+          locationType: 'current'
+        };
+      } else if (currentLocation.address?.name) {
+        locationData = {
+          locationName: currentLocation.address.name,
+          locationCoordinates: {
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude
+          },
+          locationType: 'current'
+        };
+      }
+    } else if (selectedLocation) {
+      locationData = {
+        locationName: selectedLocation.address?.name || selectedLocation.name || 'Selected Location',
+        locationCoordinates: {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude
+        },
+        locationType: 'selected'
+      };
+    }
+    
+    return locationData;
+  }, [useCurrentLocation, currentLocation, selectedLocation]);
 
   // Computed values
   const displayLocationName = useMemo(() => {
@@ -181,7 +233,6 @@ const SelectLocation: React.FC = () => {
           'Please enable location permissions to use current location features.',
           [{ text: 'OK' }]
         );
-        // Use Kumasi as default for Ghana users
         setRegion(KUMASI_REGION);
         setMarker(KUMASI_REGION);
         return;
@@ -243,15 +294,46 @@ const SelectLocation: React.FC = () => {
     setUseCurrentLocation(false);
   }, []);
 
+  // 🔥 UPDATED: Modified continue handler to pass all data
   const handleContinue = useCallback(() => {
     if (isDisabled) {
       Alert.alert('Missing Location', 'Please select a pickup location to continue.');
       return;
     }
     
-    // Navigate to next screen
-    navigation.navigate('SelectCylinder' as never);
-  }, [isDisabled, navigation]);
+    const locationData = getLocationDataToPass();
+    
+    // 🔥 NEW: Combine previous screen data with location data
+    const navigationParams = {
+      // Pass through previous screen data
+      offerName,
+      offerPrice,
+      offerId,
+      ...otherParams, // Any other params from previous screens
+      
+      // Add location data
+      ...locationData,
+      
+      // Add additional location metadata
+      selectedLocationDetails: useCurrentLocation ? currentLocation : selectedLocation,
+      timestamp: new Date().toISOString(),
+    };
+
+    console.log('Navigating to SelectCylinder with params:', navigationParams);
+    
+    navigation.navigate('SelectCylinder' as never, navigationParams as never);
+  }, [
+    isDisabled, 
+    navigation, 
+    getLocationDataToPass, 
+    offerName, 
+    offerPrice, 
+    offerId, 
+    otherParams,
+    useCurrentLocation,
+    currentLocation,
+    selectedLocation
+  ]);
 
   // Render methods
   const renderSearchHeader = () => (
@@ -368,7 +450,7 @@ const SelectLocation: React.FC = () => {
   );
 };
 
-// Styles
+// Styles remain the same
 const styles = StyleSheet.create<{
   main: ViewStyle;
   backButton: ViewStyle;

@@ -7,14 +7,66 @@ import PrimaryButtonSwipe from '@/components/PrimaryButtonSwipe';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 
+type AmountScreenParams = {
+  offerName?: string;
+  offerPrice?: string;
+  offerId?: string;
+
+  locationName?: string;
+  locationCoordinates?: { lat: number; lng: number } | null;
+  locationType?: string;
+  selectedLocationDetails?: any;
+  timestamp?: string;
+
+  price?: string;
+  cylinderName?: string;
+
+  amount?: string;
+  selectedKg?: number;
+  totalCost?: number;
+
+  [key: string]: any; // fallback
+};
+
 
 
 export default function Payment() {
   const [selectedNetwork, setSelectedNetwork] = useState(null);
 
+  
+  
+
   const navigation = useNavigation();
   const route = useRoute();
-//   const { offerName, offerPrice, price, totalCost, amount } = route.params;
+
+    const {
+    // Original offer data
+    offerName = '',
+    offerPrice = '',
+    offerId = '',
+    
+    // Location data
+    locationName = '',
+    locationCoordinates = null,
+    locationType = '',
+    selectedLocationDetails = null,
+    timestamp = '',
+
+    // Cylinder information
+    price = '',
+    cylinderName = '',
+    
+    // Amount data
+    amount = '',
+    selectedKg = 0,
+    totalCost = 0,
+    
+    // Any other params
+    ...otherParams
+  } = route.params as AmountScreenParams || {};
+
+
+
 
   const handleNetworkSelection = (network : any) => {
     setSelectedNetwork(network);
@@ -48,11 +100,13 @@ export default function Payment() {
           />
           <SecondaryButton 
             title={'Vodafone'} 
+            width={'auto'} 
             onPress={() => handleNetworkSelection('Vodafone')} 
             selected={selectedNetwork === 'Vodafone'}
           />
           <SecondaryButton 
             title={'Airtel/Tigo'} 
+            width={'auto'} 
             onPress={() => handleNetworkSelection('Airtel/Tigo')} 
             selected={selectedNetwork === 'Airtel/Tigo'}
           />
@@ -62,23 +116,23 @@ export default function Payment() {
       <View style={styles.footer}>
         <Text style={{ fontWeight: '700', fontSize: 18 }}>Cost Summary</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>{}</Text>
-          <Text style={styles.price}>GHC {}.00</Text>
+          <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>{offerName}</Text>
+          <Text>GHC {offerPrice}.00</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Cylinder Size</Text>
-          <Text>{}</Text>
+          <Text>GHC {price}</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Amount You Want To Buy</Text>
-          {/* <Text>{amount ? `GHC $.00` : 'n/a'}</Text> */}
+          <Text>{amount}</Text>
         </View>
         <View style={{ width: 'auto', height: 1, borderWidth: 1, borderColor: 'rgba(0, 0, 0, 0.10)' }}></View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Total Cost</Text>
           <Text>GHC .00</Text>
         </View>
-        <PrimaryButtonSwipe title={'Swipe To Pay'} onPress={() => navigation.navigate('Tracker')} />
+        <PrimaryButtonSwipe title={'Swipe To Pay'} onPress={() => navigation.navigate("Tracker")} />
       </View>
     </View>
   );

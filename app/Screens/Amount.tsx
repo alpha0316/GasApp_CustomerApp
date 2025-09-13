@@ -7,6 +7,20 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
 import Slider from '@react-native-community/slider';
 
+interface RouteParams {
+  offerName?: string;
+  offerPrice?: string;
+  offerId?: string;
+  locationName?: string;
+  locationCoordinates?: { latitude: number; longitude: number } | null;
+  locationType?: string;
+  selectedLocationDetails?: any;
+  timestamp?: string;
+  price?: string;
+  cylinderName?: string;
+  [key: string]: any; // For otherParams
+}
+
 export default function Amount() {
   const [amount, setAmount] = useState(''); 
   const [totalCost, setTotalCost] = useState(0); 
@@ -16,30 +30,70 @@ export default function Amount() {
 
   const navigation = useNavigation();
   const route = useRoute();
-//   const { offerName, offerPrice, price } = route.params;
+  
 
 
-  {/*useEffect(() => {
-    // Convert offerPrice, price, and amount to numbers and calculate total cost
-    const numericOfferPrice = parseFloat(offerPrice);
-    const numericPrice = parseFloat(price);
-    const numericAmount = parseFloat(amount) || 0; // Default to 0 if amount is not a number
+  const handleContinue = () => {
+    navigation.navigate('Payment' as never, {
+      // Original offer data
+      offerName,
+      offerPrice,
+      offerId,
+      
+      // Location data
+      locationName,
+      locationCoordinates,
+      locationType,
+      selectedLocationDetails,
+      timestamp,
 
-    // Calculate total cost
-    const calculatedTotalCost = numericOfferPrice + numericPrice + numericAmount;
-    setTotalCost(calculatedTotalCost);
-  }, [amount, offerPrice, price]);*/}
+      // Cylinder information
+      price,
+      cylinderName,
+      
+      // Amount data
+      amount,
+      selectedKg,
+      totalCost,
+      
+      // Any other params
+      ...otherParams
+    } as never);
+  };
 
-//   useEffect(() => {
-//     // Convert offerPrice, price, and amount to numbers and calculate total cost
-//     const numericOfferPrice = parseFloat(offerPrice) || 0;
-//     const numericPrice = parseFloat(price) || 0;
-//     const numericAmount = parseFloat(amount) || 0; // Default to 0 if amount is not a number
 
-//     // Calculate total cost
-//     const calculatedTotalCost = numericOfferPrice + numericPrice + numericAmount;
-//     setTotalCost(calculatedTotalCost);
-//   }, [amount, offerPrice, price]);
+
+   const { 
+    // Original offer data
+    offerName = '', 
+    offerPrice = '', 
+    offerId = '',
+    
+    // Location data from SelectLocation screen
+    locationName = '',
+    locationCoordinates = null,
+    locationType = '',
+    selectedLocationDetails = null,
+    timestamp = '',
+
+    /// Cylinder information
+    price ='',
+    cylinderName = '',
+    
+    // Any other params
+    ...otherParams 
+  } = route.params as RouteParams || {};
+
+  useEffect(() => {
+    // Calculate total cost whenever relevant values change
+    const offerPriceNum = parseFloat(offerPrice) || 0;
+    const cylinderPriceNum = parseFloat(price) || 0;
+    const amountNum = parseFloat(amount) || 0;
+    
+    const calculatedTotal = offerPriceNum + cylinderPriceNum + amountNum;
+    setTotalCost(calculatedTotal);
+  }, [offerPrice, price, amount]);
+
 
   const handleSliderChange = (value: number) => {
     setSliderValue(value)
@@ -182,12 +236,12 @@ const isButtonDisabled = !amount
       <View style={styles.footer}>
         <Text style={{ fontWeight: '700', fontSize: 18 }}>Cost Summary</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Regualar</Text>
-          <Text style={styles.priceText}>GHC .00</Text>
+          <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>{offerName}</Text>
+          <Text style={styles.priceText}>GHC {offerPrice}.00</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Cylinder Size</Text>
-          <Text></Text>
+          <Text>GHC {price}</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Amount You Want To Buy</Text>
@@ -199,8 +253,8 @@ const isButtonDisabled = !amount
           <Text>GHC {totalCost}.00</Text>
         </View>
         <PrimaryButton title={'Continue'} 
-        onPress={() => navigation.navigate('Payment' as never)}
-        disabled={isButtonDisabled}
+          onPress={handleContinue}
+          disabled={isButtonDisabled}
         />
       </View>
     </View>

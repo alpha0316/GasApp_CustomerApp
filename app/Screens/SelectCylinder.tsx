@@ -1,52 +1,179 @@
 import React, { useState } from 'react';
-import { Image, StyleSheet, View, Text, ScrollView } from 'react-native';
+import { Image, StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import PrimaryButton from '@/components/PrimaryButton';
 import BackButton from '@/components/BackButton';
 import SecondaryButton from '@/components/SecondaryButton';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
+type Cylinder = {
+  id: string;
+  name: string;
+  price: string;
+  image: any; // or ImageSourcePropType from 'react-native'
+};
+
+type RouteParams = {
+  offerName: string;
+  offerPrice: string;
+  offerId: string;
+  locationName: string;
+  locationCoordinates: any;
+  locationType: string;
+  selectedLocationDetails: any;
+  timestamp: string;
+  cylinderName?: string;
+  cylinderPrice?: string;
+  cylinderId?: string;
+  cylinderSize?: string;
+  orderSummary?: any;
+};
+
+
+
+
+
 export default function SelectCylinder() {
-  const [selectedSmall, setSelectedSmall] = useState(false); 
-  const [selectedMedium, setSelectedMedium] = useState(false); 
   const [price, setPrice] = useState('n/a');
   const [totalCost, setTotalCost] = useState(0);
-
-//   const handlePressSmall = () => {
-//     setSelectedSmall(!selectedSmall);
-//     setSelectedMedium(false);
-//     if (!selectedSmall) {
-//       setPrice('GHC 3.00');
-//       calculateTotalCost('GHC 3.00'); 
-//     } else {
-//       setPrice('n/a');
-//     //   setTotalCost(0); 
-//     }
-//   };
-
-//   const handlePressMedium = () => {
-//     setSelectedMedium(!selectedMedium);
-//     setSelectedSmall(false); 
-//     if (!selectedMedium) {
-//       setPrice('GHC 6.00');
-//       calculateTotalCost('GHC 6.00');
-//     } else {
-//       setPrice('n/a');
-//       setTotalCost(0); 
-//     }
-//   };
-
-//   const calculateTotalCost = (selectedPrice) => {
-//     // let offerPrice = parseFloat(route.params.offerPrice);
-//     let cylinderCost = parseFloat(selectedPrice.split(' ')[1]); 
-//     // let total = offerPrice + cylinderCost;
-//     setTotalCost(total);
-//   };
-
-  const navigation = useNavigation();
+  const [selectedId, setSelectedId] = useState<Cylinder | null>(null);
+   const navigation = useNavigation();
   const route = useRoute();
-//   const { offerName, offerPrice, offerId } = route.params;
 
-//   const isButtonDisabled = !selectedMedium && !selectedSmall
+  const cylinders = [
+    {
+      id: '1',
+      name: 'Small Size',
+      price: '3.00',
+      image: require('./../../assets/images/smallSize.png'),
+    },
+    {
+      id: '2',
+      name: 'Small Size',
+      price: '3.00',
+      image: require('./../../assets/images/smallSize.png'),
+    },
+    {
+      id: '3',
+      name: 'Medium Size',
+      price: '3.00',
+      image: require('./../../assets/images/mediumSize.png'),
+    },
+    {
+      id: '4',
+      name: 'Medium Size',
+      price: '3.00',
+      image: require('./../../assets/images/mediumSize.png'),
+    },
+  ];
+
+  const handleContinue = () => {
+    // Prepare all data to pass to Amount page
+    const navigationData = {
+      // Previous data from earlier screens
+      offerName,
+      offerPrice,
+      offerId,
+      locationName,
+      locationCoordinates,
+      locationType,
+      selectedLocationDetails,
+      timestamp,
+      
+      // New cylinder data
+      // selectedCylinder,
+      // cylinderId: selectedId,
+      cylinderName: selectedId?.name,
+      cylinderPrice: selectedId?.price,
+      price,
+      // cylinderImage: selectedId?.image,
+      
+      // Cost calculations
+      totalCost: totalCost,
+      subtotalOffer: parseFloat(offerPrice) || 0,
+      subtotalCylinder: parseFloat(selectedId?.price || '0'),
+      
+      // Summary for easy access
+      orderSummary: {
+        offer: {
+          id: offerId,
+          name: offerName,
+          price: parseFloat(offerPrice) || 0
+        },
+        location: {
+          name: locationName,
+          coordinates: locationCoordinates,
+          type: locationType,
+          details: selectedLocationDetails,
+          timestamp
+        },
+        cylinder: {
+          id: selectedId,
+          name: selectedId?.name,
+          price: parseFloat(selectedId?.price || '0'),
+          // image: selectedId?.image
+        },
+        costs: {
+          offerCost: parseFloat(offerPrice) || 0,
+          cylinderCost: parseFloat(selectedId?.price || '0'),
+          totalCost: totalCost
+        }
+      },
+      
+ 
+    };
+
+    console.log('Navigating to Amount with data:', navigationData);
+    
+    navigation.navigate('Amount', navigationData);
+  };
+
+
+  const handleSelectCylinder = (item:any) => {
+    // if tapped again, toggle off
+    if (selectedId === item.id) {
+      setSelectedId(null);
+      setPrice('n/a');
+      setTotalCost(0);
+      console.log('Deselected:', item.id);
+      return;
+    }
+
+    setSelectedId(item.id);
+    setPrice(item.price);
+
+    // More robust price parsing
+  const priceMatch = item.price.match(/[\d.]+/);
+  if (priceMatch) {
+    const cylinderCost = parseFloat(priceMatch[0]);
+    const offerPriceNum = parseFloat(offerPrice) || 0; // Convert offerPrice to number
+    setTotalCost(cylinderCost + offerPriceNum); // Now both are numbers
+  }
+
+    console.log('Selected:', item.price);
+  };
+
+const {
+  offerName,
+  offerPrice,
+  offerId,
+  locationName,
+  locationCoordinates,
+  locationType,
+  selectedLocationDetails,
+  timestamp,
+  cylinderName,
+  cylinderPrice,
+  cylinderId,
+  cylinderSize,
+  orderSummary,
+} = route.params as RouteParams;
+
+
+
+
+
+  // Check if any cylinder is selected for button state
+  const isButtonDisabled = selectedId === null;
 
   return (
     <View style={styles.main}>
@@ -54,41 +181,39 @@ export default function SelectCylinder() {
         <BackButton />
         <Text style={{ fontSize: 18, fontWeight: '700' }}>Select LPG Cylinder Size</Text>
       </View>
+
       <ScrollView style={styles.scrollContainer} bounces={false}>
-        <View style={styles.MainContainer}>
-          <View style={[styles.cylinderContainer, selectedSmall ? styles.selectedBackground : null]}>
-            <View style={styles.imgContainer}>
-              <Image source={require('./../../assets/images/smallSize.png')} style={styles.image} />
-            </View>
-            <View style={styles.textContainer}>
-              <Text>Small Size</Text>
-              <Text style={styles.priceText}>GHC 3.00</Text>
-            </View>
-            <SecondaryButton title={'Select'} onPress={''} />
-          </View>
-        </View>
-        <View style={styles.MainContainer}>
-          <View style={[styles.cylinderContainer, selectedMedium ? styles.selectedBackground : null]}>
-            <View style={styles.imgContainer}>
-              <Image source={require('./../../assets/images/mediumSize.png')} style={styles.image} />
-            </View>
-            <View style={styles.textContainer}>
-              <Text>Medium Size</Text>
-              <Text style={styles.priceText}>GHC 6.00</Text>
-            </View>
-            <SecondaryButton title={'Select'} onPress={''} />
-          </View>
+        <View style={styles.gridContainer}>
+          {cylinders.map(item => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.gridItem,
+                selectedId === item.id && styles.selectedBackground,
+              ]}
+              onPress={() => handleSelectCylinder(item)} // 🔥 FIXED: Added function call with item parameter
+            >
+              <View style={styles.imgContainer}>
+                <Image source={item.image} style={styles.image} />
+              </View>
+              <View style={styles.textContainer}>
+                <Text>{item.name}</Text>
+                <Text style={styles.priceText}>GHC {item.price}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
       </ScrollView>
+
       <View style={styles.footer}>
         <Text style={{ fontWeight: '700', fontSize: 18 }}>Cost Summary</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Regular</Text>
-          <Text style={styles.price}>GHC .00</Text>
+          <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>{offerName}</Text>
+          <Text>GHC {offerPrice === 'n/a' ? 'n/a' : offerPrice}.00</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Cylinder Size</Text>
-          <Text>{price}</Text>
+          <Text>GHC {price}</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: 'rgba(0, 0, 0, 0.60)' }}>Amount You Want To Buy</Text>
@@ -101,8 +226,8 @@ export default function SelectCylinder() {
         </View>
         <PrimaryButton
           title={'Continue'}
-          onPress={() => navigation.navigate('Amount')}
-        //   disabled={isButtonDisabled}
+          onPress={handleContinue}
+          disabled={isButtonDisabled}
         />
       </View>
     </View>
@@ -130,29 +255,6 @@ const styles = StyleSheet.create({
     maxHeight: '60%',
     overflow: 'hidden',
   },
-  MainContainer: {
-    flexDirection: 'column',
-    alignSelf: 'stretch',
-    gap: 12,
-    marginBottom: 12,
-  },
-  cylinderContainer: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.10)',
-    padding: 12,
-    gap: 8,
-    overflow: 'hidden',
-  },
-  imgContainer: {
-    alignSelf: 'stretch',
-    height: 198,
-    borderRadius: 12,
-    backgroundColor: '#FAFAFA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    maxHeight: 200,
-  },
   footer: {
     padding: 24,
     borderRadius: 16,
@@ -167,15 +269,47 @@ const styles = StyleSheet.create({
     paddingBottom: 44,
   },
   textContainer: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%'
   },
   priceText: {
     color: 'rgba(0, 0, 0, 0.60)',
   },
   selectedBackground: {
-    backgroundColor: '#F6F6F6', // Replace with your desired color
+    backgroundColor: '#F4F4F4',
     borderWidth: 1,
-    borderColor : 'rgba(0, 0, 0, 0.50)'
+    borderColor: 'rgba(0, 0, 0, 0.50)'
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    padding: 8,
+  },
+  gridItem: {
+    width: '48%',
+    marginBottom: 16,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    borderColor: 'rgba(0, 0, 0, 0.10)',
+    borderWidth: 1
+  },
+  image: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+  },
+  imgContainer: {
+    alignSelf: 'stretch',
+    height: 198,
+    borderRadius: 12,
+    backgroundColor: '#FAFAFA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    maxHeight: 200,
   },
 });
