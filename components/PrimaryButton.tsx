@@ -25,7 +25,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   return (
     <TouchableOpacity
       style={[styles.button, disabled && styles.disabled]}
-      onPress={onPress}
+      onPress={!disabled ? onPress : undefined}
       disabled={disabled}
     >
       <Text style={[styles.buttonText, textStyle]}>{title}</Text>

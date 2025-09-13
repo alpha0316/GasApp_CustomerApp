@@ -160,7 +160,7 @@ export default function Home() {
         
         <FlatList
   data={inputFields}
-  keyExtractor={(item) => item.id}
+  keyExtractor={(item) => item.id.toString()}
   renderItem={({ item }) => (
     <TouchableOpacity onPress={() => {
       navigation.navigate(item.route as "SelectLocation", {

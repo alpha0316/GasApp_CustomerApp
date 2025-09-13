@@ -1,396 +1,448 @@
-import React, { useState, useEffect, useRef, use } from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  TouchableOpacity,
-  Linking,
-  Dimensions,
-  PermissionsAndroid,
-  Platform,
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { 
+  View, 
+  StyleSheet, 
+  Dimensions, 
+  TouchableOpacity, 
+  StatusBar, 
+  Alert,
+  ViewStyle 
 } from 'react-native';
-import MapView, { Marker, UrlTile } from 'react-native-maps';
+import MapView, { 
+  Marker, 
+  PROVIDER_GOOGLE, 
+  Region, 
+  MapPressEvent,
+  LatLng 
+} from 'react-native-maps';
 import * as Location from 'expo-location';
-import Svg, { Path, Circle } from 'react-native-svg';
-import { useLocationContext } from '../../hooks/LocationContext'; 
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-
-
-const LocationIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v4h4v2h-4v4h-2v-4H7v-2h4V7z"
-      fill="#000"
-    />
-  </Svg>
-);
-
-
-
-interface Coordinates {
+// Types
+interface LocationCoords {
   latitude: number;
   longitude: number;
-  name?: string;
-  address?: any;
-  osm_id?: number;
-  osm_type?: string;
-  place_id?: number;
-  extratags?: any;
-  boundingbox?: any[];
-  display_name?: string;
 }
 
-function OpenStreetMapComponent() {
-  const mapRef = useRef<MapView>(null);
+interface AddressInfo {
+  name?: string;
+  street?: string;
+  city?: string;
+  region?: string;
+  country?: string;
+  postalCode?: string;
+}
 
-  const DEFAULT_LONGITUDE = -1.573568; // Kumasi, Ghana
-  const DEFAULT_LATITUDE = 6.678045;
-  const DEFAULT_ZOOM = 14.95;
-  const TRANSITION_DURATION = 500;
+interface LocationData {
+  coords: LocationCoords;
+  address: AddressInfo | null;
+}
 
-  const [region, setRegion] = useState({
-    latitude: DEFAULT_LATITUDE,
-    longitude: DEFAULT_LONGITUDE,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  });
-  const [isMapReady, setIsMapReady] = useState(false);
-  
-const {
-  selectedLocation,
-  setSelectedLocation,
-  userLocation,
-  setUserLocation,
-  closeLandmarks,
-  setCloseLandmarks,
-} = useLocationContext();
+interface MapScreenProps {
+  onUserLocationChange?: (location: LocationData) => void;
+  onSelectedLocationChange?: (location: LocationData) => void;
+  initialRegion?: Region;
+  showsUserLocation?: boolean;
+  showsCompass?: boolean;
+  mapType?: 'standard' | 'satellite' | 'terrain' | 'hybrid';
+}
 
+// Constants
+const { width, height } = Dimensions.get('window');
 
-useEffect(() => {
-  if (selectedLocation) {
-    // console.log('Selected  Data:', userLocation);
-  }
-}, [selectedLocation]);
+const DEFAULT_REGION: Region = {
+  latitude: 6.6885, // Kumasi, Ghana
+  longitude: -1.6244,
+  latitudeDelta: 0.01,
+  longitudeDelta: 0.01,
+};
 
-  const { 
-     currentLocation,
-     setCurrentLocation,
-   } = useLocationContext();
+const LOCATION_OPTIONS: Location.LocationOptions = {
+  accuracy: Location.Accuracy.Balanced,
+  timeInterval: 1000,
+  distanceInterval: 10,
+};
 
+const MAP_ANIMATION_DURATION = 1000;
 
+// Custom hook for location services
+const useLocationService = () => {
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-
-  useEffect(() => {
-    console.log('Initial region:', region); // Debug initial region
-    let locationSubscription: Location.LocationSubscription | null = null;
-
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.warn('Location permission denied. Using default coordinates.');
-        mapRef.current?.animateToRegion(region, TRANSITION_DURATION);
-        return;
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      const granted = status === 'granted';
+      setHasPermission(granted);
+      
+      if (!granted) {
+        setError('Location permission denied');
       }
-
-      try {
-        // Get initial location
-        let location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-        const coords = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        };
-        const newRegion = {
-          ...coords,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        };
-        console.log('Initial geolocation success:', newRegion); // Debug initial geolocation
-        setRegion(newRegion);
-        setUserLocation(coords);
-        mapRef.current?.animateToRegion(newRegion, TRANSITION_DURATION);
-
-        // Subscribe to location updates
-        locationSubscription = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.High,
-            timeInterval: 1000, // Update every 1 second
-            distanceInterval: 10, // Update every 10 meters
-          },
-          (location) => {
-            const coords = {
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            };
-            setUserLocation(coords);
-            console.log('Location update:', coords); // Debug location updates
-          }
-        );
-      } catch (error) {
-        console.error('Geolocation error:', error);
-        setUserLocation(null); // Ensure userLocation is null on error
-        mapRef.current?.animateToRegion(region, TRANSITION_DURATION);
-      }
-    })();
-
-    // Cleanup subscription on unmount
-    return () => {
-      if (locationSubscription) {
-        locationSubscription.remove();
-      }
-    };
+      
+      return granted;
+    } catch (err) {
+      const errorMsg = 'Failed to request location permission';
+      setError(errorMsg);
+      console.error(errorMsg, err);
+      return false;
+    }
   }, []);
 
-  
-  const handleRefocusLocation = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Permission to access location was denied.');
-      mapRef.current?.animateToRegion(region, TRANSITION_DURATION);
+  const getCurrentLocation = useCallback(async (): Promise<LocationData | null> => {
+    if (hasPermission === false) {
+      setError('Location permission not granted');
+      return null;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Get current position
+      const location = await Location.getCurrentPositionAsync(LOCATION_OPTIONS);
+      
+      // Get address information
+      const reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      const locationData: LocationData = {
+        coords: {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        },
+        address: reverseGeocode.length > 0 ? reverseGeocode[0] : null,
+      };
+
+      return locationData;
+    } catch (err) {
+      const errorMsg = 'Failed to get current location';
+      setError(errorMsg);
+      console.error(errorMsg, err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasPermission]);
+
+  const reverseGeocode = useCallback(async (coords: LocationCoords): Promise<AddressInfo | null> => {
+    try {
+      const result = await Location.reverseGeocodeAsync(coords);
+      return result.length > 0 ? result[0] : null;
+    } catch (err) {
+      console.error('Failed to reverse geocode:', err);
+      return null;
+    }
+  }, []);
+
+  return {
+    hasPermission,
+    isLoading,
+    error,
+    requestPermission,
+    getCurrentLocation,
+    reverseGeocode,
+  };
+};
+
+// Main Component
+const MapScreen: React.FC<MapScreenProps> = ({
+  onUserLocationChange,
+  onSelectedLocationChange,
+  initialRegion = DEFAULT_REGION,
+  showsUserLocation = true,
+  showsCompass = true,
+  mapType: initialMapType = 'standard'
+}) => {
+  // Hooks
+  const {
+    hasPermission,
+    isLoading,
+    error,
+    requestPermission,
+    getCurrentLocation,
+    reverseGeocode,
+  } = useLocationService();
+
+  // Refs
+  const mapRef = useRef<MapView>(null);
+
+  // State
+  const [region, setRegion] = useState<Region>(initialRegion);
+  const [userLocation, setUserLocation] = useState<LocationData | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+  const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain' | 'hybrid'>(initialMapType);
+
+  // Computed values
+  const mapStyles = useMemo(() => ({
+    container: styles.container,
+    map: styles.map,
+    locationButton: styles.locationButton,
+    mapTypeButton: styles.mapTypeButton,
+  }), []);
+
+  // Effects
+  useEffect(() => {
+    initializeLocation();
+  }, []);
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Location Error', error, [{ text: 'OK' }]);
+    }
+  }, [error]);
+
+  // Location initialization
+  const initializeLocation = useCallback(async () => {
+    const permissionGranted = await requestPermission();
+    
+    if (!permissionGranted) {
       return;
     }
 
-    try {
-      let location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      const coords = {
+    const location = await getCurrentLocation();
+    
+    if (location) {
+      setUserLocation(location);
+      
+      const newRegion: Region = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-      };
-      const newRegion = {
-        ...coords,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       };
-      console.log('Refocus region:', newRegion); // Debug refocus
+      
       setRegion(newRegion);
-      setUserLocation(coords);
-      mapRef.current?.animateToRegion(newRegion, TRANSITION_DURATION);
-    } catch (error) {
-      console.error('Refocus error:', error);
-      alert('Failed to get current location.');
-      setUserLocation(null);
-      mapRef.current?.animateToRegion(region, TRANSITION_DURATION);
+      onUserLocationChange?.(location);
+
+      // Animate to user location
+      mapRef.current?.animateToRegion(newRegion, MAP_ANIMATION_DURATION);
     }
-  };
+  }, [requestPermission, getCurrentLocation, onUserLocationChange]);
 
-  const handleMapReady = () => {
-    setIsMapReady(true);
-    console.log('Map ready, setting region:', region); // Debug map ready
-    mapRef.current?.animateToRegion(region, TRANSITION_DURATION);
+  // Event handlers
+  const handleMapPress = useCallback(async (event: MapPressEvent) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    
+    try {
+      const address = await reverseGeocode({ latitude, longitude });
+      
+      const locationData: LocationData = {
+        coords: { latitude, longitude },
+        address,
+      };
 
-  };
+      setSelectedLocation(locationData);
+      onSelectedLocationChange?.(locationData);
+    } catch (err) {
+      console.error('Failed to handle map press:', err);
+      Alert.alert('Error', 'Failed to get location information');
+    }
+  }, [reverseGeocode, onSelectedLocationChange]);
 
-  
+  const handleGoToMyLocation = useCallback(async () => {
+    if (userLocation) {
+      const targetRegion: Region = {
+        latitude: userLocation.coords.latitude,
+        longitude: userLocation.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
 
- const handleMapPress = async (e: any) => {
-  const { latitude, longitude } = e.nativeEvent.coordinate;
-  setSelectedLocation({ latitude, longitude })
-      // setCurrentLocation([])
+      mapRef.current?.animateToRegion(targetRegion, MAP_ANIMATION_DURATION);
+      setRegion(targetRegion);
+    } else {
+      // Try to get current location if we don't have it
+      const location = await getCurrentLocation();
+      if (location) {
+        const targetRegion: Region = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
 
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-    );
-    const data = await response.json();
-  
+        mapRef.current?.animateToRegion(targetRegion, MAP_ANIMATION_DURATION);
+        setRegion(targetRegion);
+        setUserLocation(location);
+        onUserLocationChange?.(location);
+      } else {
+        Alert.alert('Location Error', 'Unable to get your current location');
+      }
+    }
+  }, [userLocation, getCurrentLocation, onUserLocationChange]);
 
-  
-    setSelectedLocation({
-      latitude,
-      longitude,
-      name: data.display_name || '',
-      address: data.address || {},
-      osm_id: data.osm_id,
-      osm_type: data.osm_type,
-      place_id: data.place_id,
-      extratags: data.extratags || {},
-      boundingbox: data.boundingbox || [],
-      display_name: data.display_name || '',
-    });
-    // setCurrentLocation(null)
-   
-    const nearbyResponse = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=10&q=landmark&viewbox=${longitude - 0.01},${latitude + 0.01},${longitude + 0.01},${latitude - 0.01}&bounded=1`
-    );
-    const nearbyPlaces = await nearbyResponse.json();
-    // console.log('Nearby Landmarks:', nearbyPlaces);
-    setCloseLandmarks(nearbyPlaces);
+  const handleChangeMapType = useCallback(() => {
+    const types: Array<'standard' | 'satellite' | 'terrain' | 'hybrid'> = [
+      'standard', 
+      'satellite', 
+      'terrain', 
+      'hybrid'
+    ];
+    const currentIndex = types.indexOf(mapType);
+    const nextIndex = (currentIndex + 1) % types.length;
+    setMapType(types[nextIndex]);
+  }, [mapType]);
 
-  } catch (error) {
-    console.error('Nominatim error:', error);
-  }
+  const handleRegionChangeComplete = useCallback((newRegion: Region) => {
+    setRegion(newRegion);
+  }, []);
 
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-    );
-    const data = await response.json();
-    // console.log('Nominatim Place Info:', data);
+  // Render methods
+  const renderUserMarker = () => {
+    if (!userLocation || !showsUserLocation) return null;
 
-    // Optional: Get nearby places
-    const nearbyResponse = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=10&q=landmark&viewbox=${longitude - 0.01},${latitude + 0.01},${longitude + 0.01},${latitude - 0.01}&bounded=1`
-    );
-    const nearbyPlaces = await nearbyResponse.json();
-    // console.log('Nearby Landmarks:', closeLandmarks);
-    setCloseLandmarks(nearbyPlaces);
-  
-  } catch (error) {
-    console.error('Nominatim error:', error);
-  }
-};
-
-
-  const isValidCoordinates = (coords: Coordinates | null): coords is Coordinates => {
     return (
-      coords !== null &&
-      typeof coords.latitude === 'number' &&
-      typeof coords.longitude === 'number' &&
-      !isNaN(coords.latitude) &&
-      !isNaN(coords.longitude)
+      <Marker
+        coordinate={userLocation.coords}
+        title="Your Location"
+        description={userLocation.address?.name || "You are here"}
+        identifier="user-location"
+      />
     );
   };
 
-  
+  const renderSelectedMarker = () => {
+    if (!selectedLocation) return null;
 
-  return (
-    <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        region={region}
-        onRegionChangeComplete={(newRegion) => {
-          console.log('Region changed:', newRegion); // Debug region changes
-          setRegion(newRegion);
-        }}
-        showsUserLocation={false} // Disable to use custom marker
-        followsUserLocation={false} // Disable to prevent auto-centering
-        onMapReady={handleMapReady}
-        onPress={handleMapPress} // Handle map taps to place marker
+    const title = selectedLocation.address?.name || 'Selected Location';
+    const description = selectedLocation.address?.city && selectedLocation.address?.region
+      ? `${selectedLocation.address.city}, ${selectedLocation.address.region}`
+      : 'Custom location';
+
+    return (
+      <Marker
+        coordinate={selectedLocation!.coords}
+        title={title}
+        description={description}
+        pinColor="blue"
+        identifier="selected-location"
+      />
+    );
+  };
+
+  const renderControls = () => (
+    <>
+      <TouchableOpacity 
+        style={mapStyles.locationButton}
+        onPress={handleGoToMyLocation}
+        disabled={isLoading}
+        activeOpacity={0.7}
       >
-
-        <UrlTile
-          urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maximumZ={19}
-          tileSize={256}
-        />
-
-        {/* User Location Marker */}
-        {isMapReady && isValidCoordinates(userLocation) && (
-          <Marker
-        coordinate={{
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-        }}
-        title="You are here"
-          >
-        <View style={styles.userMarker}>
-          <Text style={styles.markerText}>You</Text>
-        </View>
-          </Marker>
-        )}
-
-        {/* Selected Location Marker */}
-        {isMapReady && isValidCoordinates(selectedLocation) && (
-          <Marker
-        coordinate={{
-          latitude: selectedLocation.latitude,
-          longitude: selectedLocation.longitude,
-        }}
-        title="Selected Location"
-          >
-        <View style={{ alignItems: 'center' }}>
-          <Svg width="53" height="57" viewBox="0 0 53 57" fill="none">
-            <Circle cx="26.0596" cy="31" r="26" fill="#1A1A1A" fillOpacity={0.2}/>
-            <Path d="M26.0596 0C31.5824 0 36.0596 4.47715 36.0596 10C36.0596 15.1853 32.1128 19.4474 27.0596 19.9492V30C27.0596 30.5523 26.6119 31 26.0596 31C25.5073 31 25.0596 30.5523 25.0596 30V19.9492C20.0063 19.4474 16.0596 15.1853 16.0596 10C16.0596 4.47715 20.5367 0 26.0596 0Z" fill="#34A853"/>
-            <Circle cx="26.0596" cy="10" r="5" fill="white"/>
-          </Svg>
-   
-        </View>
-          </Marker>
-        )}
-      </MapView>
-
-      <TouchableOpacity
-        style={styles.refocusButton}
-        onPress={handleRefocusLocation}
-        accessible={true}
-        accessibilityLabel="Refocus map on current location"
-      >
-        <LocationIcon />
+         <Icon name="my-location" size={24} color="#007AFF" />
       </TouchableOpacity>
 
-      {/* OSM Attribution */}
-   
+      <TouchableOpacity 
+        style={mapStyles.mapTypeButton}
+        onPress={handleChangeMapType}
+        activeOpacity={0.7}
+      >
+        <Icon 
+          name="layers" 
+          size={24} 
+          color="#007AFF" 
+        />
+      </TouchableOpacity>
+    </>
+  );
+
+  if (hasPermission === false) {
+    return (
+      <View style={[mapStyles.container, styles.centerContent]}>
+        <Icon name="location-off" size={48} color="#999" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={mapStyles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      
+      <MapView
+        ref={mapRef}
+        style={mapStyles.map}
+        provider={PROVIDER_GOOGLE}
+        mapType={mapType}
+        region={region}
+        onPress={handleMapPress}
+        onRegionChangeComplete={handleRegionChangeComplete}
+        // showsUserLocation={false} // We handle this with custom marker
+        showsCompass={showsCompass}
+        showsMyLocationButton={false} // We have custom button
+        showsPointsOfInterest={true}
+        showsBuildings={true}
+        showsTraffic={false}
+        rotateEnabled={true}
+        scrollEnabled={true}
+        zoomEnabled={true}
+        pitchEnabled={true}
+        toolbarEnabled={false}
+        showsUserLocation={true}
+      >
+        {renderUserMarker()}
+        {renderSelectedMarker()}
+      </MapView>
+
+      {renderControls()}
     </View>
   );
-}
+};
 
-const styles = StyleSheet.create({
+// Styles
+const styles = StyleSheet.create<{
+  container: ViewStyle;
+  map: ViewStyle;
+  locationButton: ViewStyle;
+  mapTypeButton: ViewStyle;
+  centerContent: ViewStyle;
+}>({
   container: {
     flex: 1,
-    position: 'relative',
+    backgroundColor: '#f5f5f5',
   },
   map: {
-    width: Dimensions.get('window').width,
-    height: '120%',
+    width,
+    height,
   },
-  refocusButton: {
+  locationButton: {
     position: 'absolute',
-    top: 20,
-    right: 30,
+    top: 60,
+    right: 20,
     backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 10,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
     elevation: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 48,
-    height: 48,
   },
-  attribution: {
+  mapTypeButton: {
     position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    padding: 4,
-    borderRadius: 4,
+    top: 120,
+    right: 20,
+    backgroundColor: 'white',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  attributionText: {
-    fontSize: 10,
-    color: '#000',
-  },
-  attributionLink: {
-    color: '#007AFF',
-    textDecorationLine: 'underline',
-  },
-  userMarker: {
-    backgroundColor: '#007AFF', // Blue for user location
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  selectedMarker: {
-    backgroundColor: '#FF3B30', // Red for selected location
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  markerText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
-// Make sure this is at the bottom
-export default OpenStreetMapComponent;
+export default MapScreen;
