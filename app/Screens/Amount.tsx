@@ -21,6 +21,8 @@ interface RouteParams {
   [key: string]: any; // For otherParams
 }
 
+
+
 export default function Amount() {
   const [amount, setAmount] = useState(''); 
   const [totalCost, setTotalCost] = useState(0); 
@@ -33,33 +35,33 @@ export default function Amount() {
   
 
 
-  const handleContinue = () => {
-    navigation.navigate('Payment' as never, {
-      // Original offer data
-      offerName,
-      offerPrice,
-      offerId,
-      
-      // Location data
-      locationName,
-      locationCoordinates,
-      locationType,
-      selectedLocationDetails,
-      timestamp,
+ const handleContinue = () => {
+  (navigation as any).navigate('Payment', {
+    // Original offer data
+    offerName,
+    offerPrice,
+    offerId,
+    
+    // Location data
+    locationName,
+    locationCoordinates,
+    locationType,
+    selectedLocationDetails,
+    timestamp,
 
-      // Cylinder information
-      price,
-      cylinderName,
-      
-      // Amount data
-      amount,
-      selectedKg,
-      totalCost,
-      
-      // Any other params
-      ...otherParams
-    } as never);
-  };
+    // Cylinder information
+    price,
+    cylinderName,
+    
+    // Amount data
+    amount,
+    selectedKg,
+    totalCost,
+    
+    // Any other params
+    ...otherParams
+  });
+};
 
 
 

@@ -9,7 +9,7 @@ type Cylinder = {
   id: string;
   name: string;
   price: string;
-  image: any; // or ImageSourcePropType from 'react-native'
+  image: any;
 };
 
 type RouteParams = {
@@ -28,16 +28,25 @@ type RouteParams = {
   orderSummary?: any;
 };
 
-
-
-
-
 export default function SelectCylinder() {
   const [price, setPrice] = useState('n/a');
   const [totalCost, setTotalCost] = useState(0);
-  const [selectedId, setSelectedId] = useState<Cylinder | null>(null);
-   const navigation = useNavigation();
+  const [selectedId, setSelectedId] = useState<string | null>(null); // Changed to string | null
+  const navigation = useNavigation();
   const route = useRoute();
+
+  // Extract route parameters with proper typing and default values
+  const params = route.params as RouteParams;
+  const {
+    offerName = '',
+    offerPrice = '',
+    offerId = '',
+    locationName = '',
+    locationCoordinates = null,
+    locationType = '',
+    selectedLocationDetails = null,
+    timestamp = '',
+  } = params || {};
 
   const cylinders = [
     {
@@ -67,7 +76,9 @@ export default function SelectCylinder() {
   ];
 
   const handleContinue = () => {
-    // Prepare all data to pass to Amount page
+    const selectedCylinder = cylinders.find(cyl => cyl.id === selectedId);
+    
+    // Prepare simplified data to pass to Amount page
     const navigationData = {
       // Previous data from earlier screens
       offerName,
@@ -79,56 +90,21 @@ export default function SelectCylinder() {
       selectedLocationDetails,
       timestamp,
       
-      // New cylinder data
-      // selectedCylinder,
-      // cylinderId: selectedId,
-      cylinderName: selectedId?.name,
-      cylinderPrice: selectedId?.price,
-      price,
-      // cylinderImage: selectedId?.image,
+      // New cylinder data (simplified)
+      cylinderName: selectedCylinder?.name || '',
+      price: selectedCylinder?.price || '',
       
       // Cost calculations
       totalCost: totalCost,
-      subtotalOffer: parseFloat(offerPrice) || 0,
-      subtotalCylinder: parseFloat(selectedId?.price || '0'),
-      
-      // Summary for easy access
-      orderSummary: {
-        offer: {
-          id: offerId,
-          name: offerName,
-          price: parseFloat(offerPrice) || 0
-        },
-        location: {
-          name: locationName,
-          coordinates: locationCoordinates,
-          type: locationType,
-          details: selectedLocationDetails,
-          timestamp
-        },
-        cylinder: {
-          id: selectedId,
-          name: selectedId?.name,
-          price: parseFloat(selectedId?.price || '0'),
-          // image: selectedId?.image
-        },
-        costs: {
-          offerCost: parseFloat(offerPrice) || 0,
-          cylinderCost: parseFloat(selectedId?.price || '0'),
-          totalCost: totalCost
-        }
-      },
-      
- 
     };
 
     console.log('Navigating to Amount with data:', navigationData);
     
-    navigation.navigate('Amount', navigationData);
+    // Use type assertion to avoid TypeScript errors
+    (navigation as any).navigate('Amount', navigationData);
   };
 
-
-  const handleSelectCylinder = (item:any) => {
+  const handleSelectCylinder = (item: Cylinder) => {
     // if tapped again, toggle off
     if (selectedId === item.id) {
       setSelectedId(null);
@@ -142,35 +118,15 @@ export default function SelectCylinder() {
     setPrice(item.price);
 
     // More robust price parsing
-  const priceMatch = item.price.match(/[\d.]+/);
-  if (priceMatch) {
-    const cylinderCost = parseFloat(priceMatch[0]);
-    const offerPriceNum = parseFloat(offerPrice) || 0; // Convert offerPrice to number
-    setTotalCost(cylinderCost + offerPriceNum); // Now both are numbers
-  }
+    const priceMatch = item.price.match(/[\d.]+/);
+    if (priceMatch) {
+      const cylinderCost = parseFloat(priceMatch[0]);
+      const offerPriceNum = parseFloat(offerPrice) || 0;
+      setTotalCost(cylinderCost + offerPriceNum);
+    }
 
     console.log('Selected:', item.price);
   };
-
-const {
-  offerName,
-  offerPrice,
-  offerId,
-  locationName,
-  locationCoordinates,
-  locationType,
-  selectedLocationDetails,
-  timestamp,
-  cylinderName,
-  cylinderPrice,
-  cylinderId,
-  cylinderSize,
-  orderSummary,
-} = route.params as RouteParams;
-
-
-
-
 
   // Check if any cylinder is selected for button state
   const isButtonDisabled = selectedId === null;
@@ -191,7 +147,7 @@ const {
                 styles.gridItem,
                 selectedId === item.id && styles.selectedBackground,
               ]}
-              onPress={() => handleSelectCylinder(item)} // 🔥 FIXED: Added function call with item parameter
+              onPress={() => handleSelectCylinder(item)}
             >
               <View style={styles.imgContainer}>
                 <Image source={item.image} style={styles.image} />

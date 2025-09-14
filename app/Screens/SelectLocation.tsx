@@ -1,24 +1,44 @@
+import { useNavigation } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  ViewStyle,
   TextStyle,
+  TouchableOpacity,
+  View,
+  ViewStyle,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import * as Location from 'expo-location';
-import Svg, { Path, G, Defs } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 import BackButton from '@/components/BackButton';
 import PrimaryButton from '@/components/PrimaryButton';
-import OpenStreetMapComponent from './OpenStreetMapComponent';
-import { useLocationContext } from '../../hooks/LocationContext'
 import { useRoute } from '@react-navigation/native';
+import { useLocationContext } from '../../hooks/LocationContext';
+import OpenStreetMapComponent from './OpenStreetMapComponent';
+
+type MyLocation = Coordinates & {
+  name?: string; // For a place name
+  address?: {
+    name?: string;
+    street?: string;
+    city?: string;
+  };
+};
+
+type RouteParams = {
+  offerName: string;
+  offerPrice: string;
+  offerId: string;
+  cylinderName?: string;
+  cylinderPrice?: string;
+  cylinderId?: string;
+  cylinderSize?: string;
+  orderSummary?: string;
+};
 
 // Types
 interface Coordinates {
@@ -32,14 +52,60 @@ interface Coordinates {
   };
 }
 
-
-
 interface Region {
   latitude: number;
   longitude: number;
   latitudeDelta: number;
   longitudeDelta: number;
 }
+
+// Type guard to check if location has address property
+const hasAddress = (location: any): location is MyLocation => {
+  return location && typeof location === 'object' && 'address' in location;
+};
+
+// Helper function to safely get location name
+const getLocationName = (location: any): string => {
+  if (!location) return '';
+  
+  if (typeof location === 'string') {
+    return location;
+  }
+  
+  if (Array.isArray(location) && location.length > 0) {
+    return String(location[0] ?? '');
+  }
+  
+  if (hasAddress(location) && location.address?.name) {
+    return location.address.name;
+  }
+  
+  if (location.name) {
+    return location.name;
+  }
+  
+  // If it's a basic Location object with coordinates
+  if (location.latitude && location.longitude) {
+    return `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
+  }
+  
+  return '';
+};
+
+// Helper function to safely get address name
+const getAddressName = (location: any): string => {
+  if (!location) return '';
+  
+  if (hasAddress(location) && location.address?.name) {
+    return location.address.name;
+  }
+  
+  if (location.name) {
+    return location.name;
+  }
+  
+  return '';
+};
 
 // Constants
 const DEFAULT_REGION: Region = {
@@ -135,51 +201,47 @@ const SelectLocation: React.FC = () => {
   const { hasPermission, requestPermission } = useLocationPermission();
   const route = useRoute();
   
-  // 🔥 UPDATED: Get previous screen data with defaults
+  // Get previous screen data with defaults
+  const params = route.params as RouteParams;
   const { 
     offerName = '', 
     offerPrice = '', 
     offerId = '',
-    // Add any other parameters you expect from previous screens
     ...otherParams 
-  } = route.params || {};
+  } = params || {};
 
   // State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const [marker, setMarker] = useState<Region | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Coordinates | null>(null);
-  const [useCurrentLocation, setUseCurrentLocation] = useState(true);
+  const [useCurrentLocation, setUseCurrentLocation] = useState<boolean>(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-
-  // 🔥 NEW: Prepare location data to send to next screen
+  
+  // Prepare location data to send to next screen
   const getLocationDataToPass = useCallback(() => {
     let locationData = {};
     
     if (useCurrentLocation && currentLocation) {
-      if (typeof currentLocation === 'string') {
+      const locationName = getLocationName(currentLocation);
+      locationData = {
+        locationName,
+        locationType: 'current'
+      };
+      
+      // Add coordinates if available
+      if (currentLocation && typeof currentLocation === 'object' && 'latitude' in currentLocation) {
         locationData = {
-          locationName: currentLocation,
-          locationType: 'current'
-        };
-      } else if (Array.isArray(currentLocation) && currentLocation.length > 0) {
-        locationData = {
-          locationName: String(currentLocation[0] ?? ''),
-          locationType: 'current'
-        };
-      } else if (currentLocation.address?.name) {
-        locationData = {
-          locationName: currentLocation.address.name,
+          ...locationData,
           locationCoordinates: {
             latitude: currentLocation.latitude,
             longitude: currentLocation.longitude
-          },
-          locationType: 'current'
+          }
         };
       }
     } else if (selectedLocation) {
       locationData = {
-        locationName: selectedLocation.address?.name || selectedLocation.name || 'Selected Location',
+        locationName: getAddressName(selectedLocation) || selectedLocation.name || 'Selected Location',
         locationCoordinates: {
           latitude: selectedLocation.latitude,
           longitude: selectedLocation.longitude
@@ -193,16 +255,7 @@ const SelectLocation: React.FC = () => {
 
   // Computed values
   const displayLocationName = useMemo(() => {
-    if (typeof currentLocation === 'string') {
-      return currentLocation;
-    }
-    if (Array.isArray(currentLocation) && currentLocation.length > 0) {
-      return String(currentLocation[0] ?? '');
-    }
-    if (currentLocation?.address?.name) {
-      return currentLocation.address.name;
-    }
-    return '';
+    return getLocationName(currentLocation);
   }, [currentLocation]);
 
   const isDisabled = !currentLocation || !marker;
@@ -294,7 +347,7 @@ const SelectLocation: React.FC = () => {
     setUseCurrentLocation(false);
   }, []);
 
-  // 🔥 UPDATED: Modified continue handler to pass all data
+  // Modified continue handler to pass all data
   const handleContinue = useCallback(() => {
     if (isDisabled) {
       Alert.alert('Missing Location', 'Please select a pickup location to continue.');
@@ -303,13 +356,13 @@ const SelectLocation: React.FC = () => {
     
     const locationData = getLocationDataToPass();
     
-    // 🔥 NEW: Combine previous screen data with location data
+    // Combine previous screen data with location data
     const navigationParams = {
       // Pass through previous screen data
       offerName,
       offerPrice,
       offerId,
-      ...otherParams, // Any other params from previous screens
+      ...otherParams,
       
       // Add location data
       ...locationData,
@@ -401,7 +454,23 @@ const SelectLocation: React.FC = () => {
       <View style={styles.mapContainer}>
         <OpenStreetMapComponent
           onUserLocationChange={handleUserLocationChange}
-          onSelectedLocationChange={handleSelectedLocationChange}
+          onSelectedLocationChange={(locationData: any) => {
+            // Handle the LocationData type from OpenStreetMapComponent
+            // Convert it to our expected Coordinates format
+            if (locationData) {
+              // If your OpenStreetMapComponent provides coordinates separately,
+              // you might need to extract them differently
+              const coordinates: Coordinates = {
+                name: locationData.name,
+                latitude: locationData.latitude || 0, // Adjust based on actual LocationData structure
+                longitude: locationData.longitude || 0, // Adjust based on actual LocationData structure
+                address: locationData.address,
+              };
+              
+              setSelectedLocation(coordinates);
+              setUseCurrentLocation(false);
+            }
+          }}
         />
       </View>
 
@@ -415,7 +484,7 @@ const SelectLocation: React.FC = () => {
           handleUseCurrentLocation,
           <HomeIcon />,
           'Use Current Location',
-          currentLocation?.address?.name || 
+          getAddressName(currentLocation) || 
           'Save time by selecting your current location',
           isLoadingLocation
         )}
@@ -425,7 +494,7 @@ const SelectLocation: React.FC = () => {
           handleUseSelectedLocation,
           <LocationIcon filled={selectedLocation !== null} />,
           'Selected Location',
-          selectedLocation?.address?.name || 
+          getAddressName(selectedLocation) || 
           'Your selected pickup point will appear here',
           !selectedLocation
         )}
